@@ -1,0 +1,9 @@
+solid motor
+  facet normal 0 0 1
+    outer loop
+      vertex -25.0 -25.0 0
+      vertex 25.0 -25.0 0
+      vertex 25.0 25.0 0
+    endloop
+  endfacet
+endsolid motor

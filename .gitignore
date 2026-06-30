@@ -1,0 +1,11 @@
+uorfin_env/
+.env
+core/build/
+plugins/build/
+plugins/lib/
+*.so
+*.exe
+*.out
+__pycache__/
+*.pyc
+.DS_Store

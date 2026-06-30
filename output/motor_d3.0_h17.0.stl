@@ -1,0 +1,86 @@
+solid generated
+  facet normal 0.0 0.0 -9.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex 1.5 1.5 -1.5
+      vertex 1.5 -1.5 -1.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 -9.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex -1.5 1.5 -1.5
+      vertex 1.5 1.5 -1.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 9.0
+    outer loop
+      vertex -1.5 -1.5 1.5
+      vertex 1.5 -1.5 1.5
+      vertex 1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal 0.0 0.0 9.0
+    outer loop
+      vertex -1.5 -1.5 1.5
+      vertex 1.5 1.5 1.5
+      vertex -1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal 0.0 -9.0 0.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex 1.5 -1.5 -1.5
+      vertex 1.5 -1.5 1.5
+    endloop
+  endfacet
+  facet normal 0.0 -9.0 0.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex 1.5 -1.5 1.5
+      vertex -1.5 -1.5 1.5
+    endloop
+  endfacet
+  facet normal 0.0 9.0 0.0
+    outer loop
+      vertex 1.5 1.5 -1.5
+      vertex -1.5 1.5 -1.5
+      vertex -1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal 0.0 9.0 -0.0
+    outer loop
+      vertex 1.5 1.5 -1.5
+      vertex -1.5 1.5 1.5
+      vertex 1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal -9.0 0.0 0.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex -1.5 -1.5 1.5
+      vertex -1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal -9.0 0.0 0.0
+    outer loop
+      vertex -1.5 -1.5 -1.5
+      vertex -1.5 1.5 1.5
+      vertex -1.5 1.5 -1.5
+    endloop
+  endfacet
+  facet normal 9.0 0.0 0.0
+    outer loop
+      vertex 1.5 -1.5 -1.5
+      vertex 1.5 1.5 -1.5
+      vertex 1.5 1.5 1.5
+    endloop
+  endfacet
+  facet normal 9.0 0.0 0.0
+    outer loop
+      vertex 1.5 -1.5 -1.5
+      vertex 1.5 1.5 1.5
+      vertex 1.5 -1.5 1.5
+    endloop
+  endfacet
+endsolid generated

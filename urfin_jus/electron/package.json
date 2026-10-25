@@ -1,0 +1,48 @@
+{
+  "name": "urfin-jus",
+  "version": "1.0.0",
+  "description": "Desktop application for Urfin Jus",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.urfinjus.app",
+    "productName": "Urfin Jus",
+    "directories": {
+        "output": "dist"
+    },
+    "files": [
+        "main.js",
+        "preload.js",
+        "setup.html",
+        "setup.js",
+        "package.json"
+    ],
+    "extraResources": [
+        {
+            "from": "../web/dist/run_backend",
+            "to": "backend/run_backend",
+            "filter": ["**/*"]
+        }
+    ],
+    "linux": {
+        "target": ["AppImage", "deb"],
+        "category": "Utility"
+    },
+    "win": {
+        "target": ["nsis"]
+    },
+    "mac": {
+        "target": ["dmg"]
+    }
+},
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.6.0"
+  },
+  "dependencies": {
+    "app-builder-bin": "^4.0.0"
+  }
+}

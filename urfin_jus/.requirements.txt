@@ -1,0 +1,6 @@
+flask
+flask-socketio
+requests
+pyyaml
+python-dotenv
+openai

@@ -1,0 +1,151 @@
+# skills/cad_skill.py
+"""
+Навык CAD для генерации 3D-моделей через openklhcad (CadQuery).
+Интегрирует двухполушарное мышление и TRIZ.
+"""
+
+import json
+import logging
+import sys
+import os
+import hashlib
+from typing import Optional, Dict, Any
+
+# Добавляем путь к корню проекта для импорта модуля openklhcad
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from openklhcad import (
+    PromptAnalyzer,
+    ShapeRecognizer,
+    CADCodeGenerator,
+    TRIZCalculator,
+    GeometryEngine,
+    MeshHandler
+)
+
+logger = logging.getLogger(__name__)
+
+# Папка для сохранения STL
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+class CadSkill:
+    def __init__(self):
+        self.analyzer = PromptAnalyzer()
+        self.recognizer = ShapeRecognizer()
+        self.generator = CADCodeGenerator(self.recognizer)
+        self.triz = TRIZCalculator()
+        self.engine = GeometryEngine()
+        self.mesh_handler = MeshHandler()
+        logger.info("CadSkill инициализирован (openklhcad + TRIZ)")
+
+    def generate_model(self, prompt: str, use_triz: bool = True) -> Dict[str, Any]:
+        """
+        Генерирует 3D-модель по текстовому промпту.
+        Если use_triz=True, добавляет TRIZ-анализ.
+        """
+        # 1. Анализ промпта
+        params = self.analyzer.parse_prompt(prompt)
+
+        # 2. Распознавание формы
+        shape_info = self.recognizer.recognize(prompt, params["parameters"])
+
+        # 3. TRIZ (опционально)
+        solutions = []
+        if use_triz:
+            solutions = self.triz.analyze(shape_info)
+
+        # 4. Генерация кода
+        code = self.generator.generate_code(prompt, params["parameters"])
+
+        # 5. Выполнение кода
+        try:
+            result = self.generator.execute_code(code)
+        except Exception as e:
+            logger.exception("Ошибка выполнения кода")
+            return {"error": f"Ошибка генерации: {str(e)}"}
+
+        # 6. Конвертация в mesh (trimesh)
+        mesh = self.mesh_handler.from_cadquery(result)
+
+        # 7. Сохранение STL
+        filename = self._save_mesh(mesh, prompt)
+
+        return {
+            "mesh": mesh,                 # для дальнейшей обработки
+            "filename": filename,          # имя сохранённого STL
+            "code": code,
+            "shape_info": shape_info,
+            "solutions": solutions,
+            "params": params
+        }
+
+    def _save_mesh(self, mesh, prompt: str) -> str:
+        """Сохраняет mesh как STL и возвращает имя файла."""
+        if mesh is None:
+            return ""
+        hash_str = hashlib.md5(prompt.encode()).hexdigest()[:8]
+        filename = f"cad_{hash_str}.stl"
+        filepath = os.path.join(OUTPUT_DIR, filename)
+        mesh.export(filepath)
+        return filename
+
+    def handle_message(self, message: str) -> str:
+        """Обработка JSON-команд."""
+        try:
+            data = json.loads(message)
+        except json.JSONDecodeError:
+            return json.dumps({"error": "Неверный формат JSON"})
+
+        command = data.get("command")
+        params = data.get("params", {})
+
+        if command == "generate":
+            prompt = params.get("prompt", "").strip()
+            if not prompt:
+                return json.dumps({"error": "Пустой промпт"})
+            use_triz = params.get("use_triz", True)
+            try:
+                result = self.generate_model(prompt, use_triz)
+                # Сериализуем результат (исключая mesh)
+                return json.dumps({
+                    "status": "ok",
+                    "filename": result.get("filename", ""),
+                    "code": result.get("code", ""),
+                    "shape_info": result.get("shape_info", {}),
+                    "solutions": result.get("solutions", []),
+                    "params": result.get("params", {})
+                })
+            except Exception as e:
+                logger.exception("Ошибка при генерации")
+                return json.dumps({"error": str(e)})
+
+        elif command == "status":
+            return json.dumps({"status": "CadSkill активен"})
+
+        else:
+            return json.dumps({"error": f"Неизвестная команда: {command}"})
+
+
+# ===================== Глобальные функции для оркестратора =====================
+
+_skill = None
+
+
+def init(name: str) -> None:
+    global _skill
+    _skill = CadSkill()
+    logger.info(f"CadSkill '{name}' инициализирован")
+
+
+def handle_message(message: str) -> str:
+    if _skill is None:
+        return json.dumps({"error": "Навык не инициализирован"})
+    return _skill.handle_message(message)
+
+
+def shutdown(name: Optional[str] = None) -> None:
+    global _skill
+    _skill = None
+    logger.info("CadSkill выгружен")

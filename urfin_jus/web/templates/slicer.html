@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KLH Slicer — 3D слайсер</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #cdd6f4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #2a2a3e; }
+        ::-webkit-scrollbar-thumb { background: #89b4fa; border-radius: 3px; }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: #25253a;
+            border-bottom: 1px solid #3a3a4e;
+            flex-shrink: 0;
+            height: 48px;
+            flex-wrap: wrap;
+        }
+        .toolbar .logo { font-size: 20px; font-weight: 700; color: #89b4fa; margin-right: 12px; }
+        .toolbar .logo span { color: #a6e3a1; }
+        .toolbar .sep { width: 1px; height: 28px; background: #3a3a4e; margin: 0 4px; }
+        .toolbar button {
+            background: transparent;
+            border: none;
+            color: #cdd6f4;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .toolbar button:hover { background: #3a3a4e; }
+        .toolbar button.primary { background: #89b4fa; color: #1a1a2e; }
+        .toolbar button.primary:hover { opacity: 0.85; }
+        .toolbar button.success { color: #a6e3a1; }
+        .toolbar button.danger { color: #f38ba8; }
+        .toolbar button.warning { color: #f9e2af; }
+        .toolbar .printer-name {
+            margin-left: auto;
+            font-size: 13px;
+            color: #a6adc8;
+            background: #2a2a3e;
+            padding: 2px 12px;
+            border-radius: 12px;
+        }
+        .toolbar .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6c7086;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .toolbar .status-dot.online { background: #a6e3a1; }
+        .toolbar .status-dot.offline { background: #f38ba8; }
+        .toolbar .status-dot.printing { background: #f9e2af; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+        .main { display: flex; flex: 1; overflow: hidden; }
+
+        .settings-panel {
+            flex: 0 0 340px;
+            background: #1e1e32;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3a3a4e;
+            overflow: hidden;
+        }
+        .settings-panel .header {
+            padding: 8px 12px;
+            background: #25253a;
+            border-bottom: 1px solid #3a3a4e;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-panel .header h3 { font-size: 14px; font-weight: 600; }
+        .settings-panel .header .preset-btn {
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .settings-panel .header .preset-btn:hover { background: #3a3a4e; }
+        .settings-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 10px 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid #3a3a4e;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            background: #1e1e32;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #a6adc8;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            border-bottom: 2px solid transparent;
+            transition: 0.15s;
+        }
+        .tab-btn:hover { color: #cdd6f4; background: #2a2a3e; }
+        .tab-btn.active { color: #89b4fa; background: #2a2a3e; border-bottom-color: #89b4fa; }
+        .tab-content { display: none; animation: fadeIn 0.2s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: translateY(0); } }
+
+        .param-group {
+            background: #25253a;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+        .param-group h4 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #89b4fa;
+            margin-bottom: 4px;
+        }
+        .param-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 0;
+            font-size: 12px;
+            gap: 6px;
+        }
+        .param-row label { color: #cdd6f4; min-width: 100px; flex-shrink: 0; }
+        .param-row input, .param-row select {
+            background: #12121e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 72px;
+            text-align: right;
+        }
+        .param-row input:focus, .param-row select:focus { border-color: #89b4fa; outline: none; }
+        .param-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #89b4fa; cursor: pointer; text-align: left; }
+        .param-row .unit { color: #6c7086; font-size: 10px; min-width: 16px; }
+        .param-row .hint { color: #6c7086; font-size: 10px; margin-left: auto; padding-left: 8px; white-space: nowrap; }
+        .param-row.wide input, .param-row.wide select { width: 100px; }
+
+        .printer-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .printer-selector select {
+            background: #12121e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            flex: 1;
+            min-width: 140px;
+        }
+        .printer-selector button {
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .printer-selector button:hover { background: #3a3a4e; }
+
+        .connection-area {
+            background: #25253a;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+        .connection-row {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .connection-row select, .connection-row input {
+            background: #12121e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            flex: 1;
+            min-width: 60px;
+        }
+        .connection-row input[type="text"] { flex: 2; }
+        .connection-row .port-input { width: 70px; flex: none; }
+        .connection-row button {
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .connection-row button:hover { background: #3a3a4e; }
+        .connection-row button.success { background: #a6e3a1; color: #1a1a2e; border-color: #a6e3a1; }
+        .connection-row button.danger { background: #f38ba8; color: #1a1a2e; border-color: #f38ba8; }
+        .connection-row button.warning { background: #f9e2af; color: #1a1a2e; border-color: #f9e2af; }
+
+        #http-url-row {
+            margin-top: 4px;
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+        #http-url-row input {
+            flex: 1;
+            background: #12121e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .calibration-section {
+            background: #25253a;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+        .calibration-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .calibration-row button {
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .calibration-row button:hover { background: #3a3a4e; }
+        .calibration-row button.primary { background: #89b4fa; color: #1a1a2e; border-color: #89b4fa; }
+        .calibration-status { font-size: 11px; margin-left: 6px; }
+        .calibration-status .ok { color: #a6e3a1; }
+        .calibration-status .error { color: #f38ba8; }
+        .calibration-status .running { color: #f9e2af; }
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            background: #25253a;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            margin: 4px 0 6px;
+            align-items: center;
+        }
+        .status-bar .item { display: flex; align-items: center; gap: 4px; }
+        .status-bar .item .label { color: #6c7086; }
+        .progress-container {
+            width: 100%;
+            height: 3px;
+            background: #2a2a3e;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 2px 0 6px;
+        }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #89b4fa, #a6e3a1); width: 0%; border-radius: 2px; transition: width 0.3s; }
+        .log-area { flex: 1; min-height: 50px; margin-top: 4px; }
+        #printer-log {
+            background: #12121e;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 4px 8px;
+            height: 100%;
+            min-height: 60px;
+            max-height: 110px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            color: #a6adc8;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        #printer-log .log-time { color: #6c7086; margin-right: 6px; }
+        #printer-log .log-ok { color: #a6e3a1; }
+        #printer-log .log-error { color: #f38ba8; }
+        #printer-log .log-warn { color: #f9e2af; }
+        #printer-log .log-info { color: #89b4fa; }
+
+        .viewer {
+            flex: 1;
+            position: relative;
+            background: #12121e;
+            overflow: hidden;
+        }
+        #slicer-three-container { width: 100%; height: 100%; }
+        .viewer-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(18,18,30,0.75);
+            padding: 2px 14px;
+            border-radius: 16px;
+            font-size: 11px;
+            color: #6c7086;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+            border: 1px solid #2a2a3e;
+        }
+        .view-reset {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #cdd6f4;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .view-reset:hover { background: #3a3a4e; }
+
+        .info-panel {
+            flex: 0 0 200px;
+            background: #1e1e32;
+            border-left: 1px solid #3a3a4e;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 10px;
+            overflow: hidden;
+        }
+        .info-header { font-size: 12px; font-weight: 600; color: #89b4fa; margin-bottom: 4px; border-bottom: 1px solid #2a2a3e; padding-bottom: 2px; }
+        .info-content { font-size: 12px; color: #cdd6f4; overflow-y: auto; flex: 1; }
+        .info-content p { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #2a2a3e; }
+        .info-content .label { color: #6c7086; }
+        #gcode-canvas { width: 100%; height: auto; background: #12121e; border: 1px solid #2a2a3e; border-radius: 4px; }
+
+        /* Новая секция для загрузки модели */
+        .upload-section {
+            background: #25253a;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .upload-section label {
+            color: #a6adc8;
+            font-size: 12px;
+        }
+        .upload-section input[type="file"] {
+            display: none;
+        }
+        .upload-section .file-name {
+            color: #cdd6f4;
+            font-size: 12px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 1200px) {
+            .settings-panel { flex-basis: 280px; }
+            .info-panel { flex-basis: 160px; }
+        }
+        @media (max-width: 900px) {
+            .main { flex-direction: column; }
+            .settings-panel { flex-basis: auto; max-height: 45vh; border-right: none; border-bottom: 1px solid #3a3a4e; }
+            .info-panel { flex-basis: auto; max-height: 25vh; border-left: none; border-top: 1px solid #3a3a4e; flex-direction: row; flex-wrap: wrap; }
+            .info-panel .info-header { width: 100%; }
+            .info-content { flex: 1; min-width: 120px; }
+            #gcode-canvas { max-width: 150px; }
+            .viewer { min-height: 300px; flex: 1; }
+        }
+        @media (max-width: 600px) {
+            .toolbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
+            .param-row { flex-wrap: wrap; gap: 2px; }
+            .param-row label { min-width: 80px; font-size: 11px; }
+            .param-row input, .param-row select { width: 60px; font-size: 11px; }
+            .tab-btn { font-size: 10px; padding: 2px 6px; }
+            .settings-panel { max-height: 50vh; }
+            .info-panel { max-height: 30vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="toolbar">
+        <div class="logo">KLH<span>Slicer</span></div>
+        <span class="sep"></span>
+        <!-- Новая кнопка загрузки -->
+        <button onclick="document.getElementById('stl-upload').click()" class="primary">📂 Загрузить STL</button>
+        <input type="file" id="stl-upload" accept=".stl" style="display:none">
+        <span id="model-filename" style="font-size:12px; color:#a6adc8;">Файл не выбран</span>
+        <span class="sep"></span>
+        <button onclick="sliceModel()" class="primary">🍰 Слайсинг</button>
+        <button onclick="downloadGCode()">💾 G-код</button>
+        <span class="sep"></span>
+        <button onclick="startPrint()" class="success">▶ Печать</button>
+        <button onclick="pausePrint()" class="warning">⏸ Пауза</button>
+        <button onclick="stopPrint()" class="danger">⏹ Стоп</button>
+        <button onclick="clearBed()">🧹 Очистить</button>
+        <span class="sep"></span>
+        <span class="printer-name" id="printer-name-display">Flyingbear Reborn 3</span>
+        <span class="status-dot offline" id="status-dot"></span>
+        <span id="status-text" style="font-size:13px;">Отключено</span>
+        <a href="/" style="color:#89b4fa; text-decoration:none; margin-left:auto; font-size:13px; border:1px solid #89b4fa; padding:2px 10px; border-radius:4px;">← Главная</a>
+    </header>
+
+    <div class="main">
+
+        <aside class="settings-panel">
+            <div class="header">
+                <h3>Настройки печати</h3>
+                <button class="preset-btn" onclick="loadPrinterPreset()">Загрузить профиль</button>
+            </div>
+            <div class="settings-scroll">
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tab-printer">Принтер</button>
+                    <button class="tab-btn" data-tab="tab-quality">Качество</button>
+                    <button class="tab-btn" data-tab="tab-speed">Скорость</button>
+                    <button class="tab-btn" data-tab="tab-temp">Температура</button>
+                    <button class="tab-btn" data-tab="tab-support">Поддержки</button>
+                    <button class="tab-btn" data-tab="tab-material">Материал</button>
+                    <button class="tab-btn" data-tab="tab-advanced">Дополнительно</button>
+                    <button class="tab-btn" data-tab="tab-calibration">Калибровка</button>
+                </div>
+
+                <div id="tab-printer" class="tab-content active">
+                    <div class="printer-selector">
+                        <select id="printer-select" onchange="loadPrinterPreset()">
+                            <optgroup label="Ultimaker">
+                                <option value="ultimaker2">Ultimaker 2+</option>
+                                <option value="ultimaker3">Ultimaker 3</option>
+                                <option value="ultimakerS5">Ultimaker S5</option>
+                            </optgroup>
+                            <optgroup label="Creality">
+                                <option value="ender3">Creality Ender 3</option>
+                                <option value="ender3v2">Ender 3 V2</option>
+                                <option value="cr10">CR-10</option>
+                                <option value="cr10s">CR-10S</option>
+                            </optgroup>
+                            <optgroup label="Prusa">
+                                <option value="prusa_i3_mk3s">Prusa i3 MK3S+</option>
+                                <option value="prusa_mini">Prusa Mini</option>
+                            </optgroup>
+                            <optgroup label="Bambu Lab">
+                                <option value="bambu_x1c">X1 Carbon</option>
+                                <option value="bambu_p1p">P1P</option>
+                            </optgroup>
+                            <optgroup label="Anycubic">
+                                <option value="anycubic_kobra">Kobra</option>
+                                <option value="anycubic_vyper">Vyper</option>
+                            </optgroup>
+                            <optgroup label="Flyingbear">
+                                <option value="flyingbear_reborn3" selected>Flyingbear Reborn 3</option>
+                                <option value="flyingbear_reborn2">Flyingbear Reborn 2</option>
+                                <option value="flyingbear_ghost5">Ghost 5</option>
+                                <option value="flyingbear_ghost4s">Ghost 4S</option>
+                                <option value="flyingbear_ghost6">Ghost 6</option>
+                                <option value="flyingbear_ghost4">Ghost 4</option>
+                            </optgroup>
+                            <optgroup label="Прочие">
+                                <option value="flashforge_adventurer3">FlashForge Adventurer 3</option>
+                                <option value="raise3d_pro2">Raise3D Pro2</option>
+                                <option value="voron_24">Voron 2.4</option>
+                                <option value="voron_trident">Voron Trident</option>
+                            </optgroup>
+                            <optgroup label="Пользовательский">
+                                <option value="custom">✏️ Свой</option>
+                            </optgroup>
+                        </select>
+                        <button onclick="loadPrinterPreset()">Применить</button>
+                    </div>
+
+                    <div class="connection-area">
+                        <div class="connection-row">
+                            <select id="connection-type">
+                                <option value="usb">USB (последовательный)</option>
+                                <option value="wifi" selected>WiFi / IP</option>
+                                <option value="bluetooth">Bluetooth</option>
+                            </select>
+                            <input type="text" id="connection-address" placeholder="IP или /dev/ttyUSB0" style="flex:2;" value="192.168.0.125">
+                            <input type="text" id="connection-port" placeholder="Порт" value="7125" class="port-input">
+                            <select id="connection-protocol">
+                                <option value="moonraker" selected>Moonraker (Klipper)</option>
+                                <option value="octoprint">OctoPrint API</option>
+                                <option value="tcp">TCP (MKS WiFi)</option>
+                                <option value="http">HTTP (веб-интерфейс)</option>
+                            </select>
+                            <button class="success" onclick="connectPrinter()">Подключить</button>
+                            <button class="warning" onclick="discoverPrinters()">🔍 Найти</button>
+                            <button class="danger" onclick="disconnectPrinter()">Отключить</button>
+                        </div>
+                        <div class="connection-row" id="http-url-row" style="display:none;">
+                            <span style="font-size:12px; color:#a6adc8;">URL для G-кода:</span>
+                            <input type="text" id="http-gcode-url" placeholder="Напр. /gcode или /command" value="/gcode">
+                        </div>
+                        <div style="font-size:10px; color:#6c7086; margin-top:2px;">
+                            Для USB: /dev/ttyUSB0 &nbsp;|&nbsp; Для Klipper: IP и порт 7125 (Moonraker)
+                        </div>
+                    </div>
+
+                    <div id="custom-printer-settings" style="display:none;">
+                        <div class="param-group"><h4>Размеры стола</h4>
+                            <div class="param-row"><label>Ширина (X)</label><input type="number" id="custom-bed-x" value="235"><span class="unit">мм</span></div>
+                            <div class="param-row"><label>Глубина (Y)</label><input type="number" id="custom-bed-y" value="235"><span class="unit">мм</span></div>
+                            <div class="param-row"><label>Высота (Z)</label><input type="number" id="custom-bed-z" value="270"><span class="unit">мм</span></div>
+                            <div class="param-row"><label>Диаметр сопла</label><input type="number" id="custom-nozzle" value="0.4" step="0.05"><span class="unit">мм</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Секция загрузки модели -->
+                    <div class="upload-section">
+                        <label for="stl-upload">📁 Загрузить STL:</label>
+                        <button onclick="document.getElementById('stl-upload').click()" class="primary">Выбрать файл</button>
+                        <span class="file-name" id="uploaded-filename">Файл не выбран</span>
+                    </div>
+                </div>
+
+                <div id="tab-quality" class="tab-content">
+                    <div class="param-group"><h4>Слои</h4>
+                        <div class="param-row"><label>Высота слоя</label><input type="number" id="layer-height" value="0.2" step="0.01"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Ширина экструзии</label><input type="number" id="line-width" value="0.4" step="0.01"><span class="unit">мм</span></div>
+                    </div>
+                    <div class="param-group"><h4>Стенки</h4>
+                        <div class="param-row"><label>Толщина стенок</label><input type="number" id="wall-thickness" value="1.2" step="0.1"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Количество стенок</label><input type="number" id="wall-count" value="3" step="1"><span class="hint">шт</span></div>
+                    </div>
+                    <div class="param-group"><h4>Верх / Низ</h4>
+                        <div class="param-row"><label>Верхние слои</label><input type="number" id="top-layers" value="4" step="1"><span class="hint">шт</span></div>
+                        <div class="param-row"><label>Нижние слои</label><input type="number" id="bottom-layers" value="4" step="1"><span class="hint">шт</span></div>
+                    </div>
+                    <div class="param-group"><h4>Заполнение</h4>
+                        <div class="param-row"><label>Плотность</label><input type="number" id="infill" value="20" step="5"><span class="unit">%</span></div>
+                        <div class="param-row"><label>Тип</label><select id="infill-pattern"><option value="grid">Сетка</option><option value="lines">Линии</option><option value="cubic">Кубическое</option><option value="gyroid">Гироид</option><option value="honeycomb">Соты</option></select></div>
+                        <div class="param-row"><label>Перекрытие</label><input type="number" id="infill-overlap" value="15" step="5"><span class="unit">%</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-speed" class="tab-content">
+                    <div class="param-group"><h4>Скорости</h4>
+                        <div class="param-row"><label>Печать</label><input type="number" id="print-speed" value="50" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Перемещение</label><input type="number" id="travel-speed" value="150" step="10"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Внешние стенки</label><input type="number" id="outer-wall-speed" value="30" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Внутренние стенки</label><input type="number" id="inner-wall-speed" value="45" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Верхние слои</label><input type="number" id="top-speed" value="30" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Нижние слои</label><input type="number" id="bottom-speed" value="20" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Заполнение</label><input type="number" id="infill-speed" value="60" step="5"><span class="unit">мм/с</span></div>
+                    </div>
+                    <div class="param-group"><h4>Ускорение</h4>
+                        <div class="param-row"><label>Печать</label><input type="number" id="acceleration" value="1000" step="100"><span class="unit">мм/с²</span></div>
+                        <div class="param-row"><label>Перемещение</label><input type="number" id="travel-acceleration" value="2000" step="100"><span class="unit">мм/с²</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-temp" class="tab-content">
+                    <div class="param-group"><h4>Температура</h4>
+                        <div class="param-row"><label>Сопло</label><input type="number" id="nozzle-temp" value="200" step="5"><span class="unit">°C</span></div>
+                        <div class="param-row"><label>Стол</label><input type="number" id="bed-temp" value="60" step="5"><span class="unit">°C</span></div>
+                        <div class="param-row"><label>Сопло (начальная)</label><input type="number" id="initial-nozzle-temp" value="200" step="5"><span class="unit">°C</span></div>
+                        <div class="param-row"><label>Стол (начальная)</label><input type="number" id="initial-bed-temp" value="60" step="5"><span class="unit">°C</span></div>
+                    </div>
+                    <div class="param-group"><h4>Охлаждение</h4>
+                        <div class="param-row"><label>Вентилятор</label><select id="fan-speed"><option value="0">0%</option><option value="30">30%</option><option value="50">50%</option><option value="70">70%</option><option value="100" selected>100%</option></select></div>
+                        <div class="param-row"><label>Мин. скорость</label><input type="number" id="min-fan-speed" value="0" step="5"><span class="unit">%</span></div>
+                        <div class="param-row"><label>Макс. скорость</label><input type="number" id="max-fan-speed" value="100" step="5"><span class="unit">%</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-support" class="tab-content">
+                    <div class="param-group"><h4>Поддержки</h4>
+                        <div class="param-row"><label>Включить</label><input type="checkbox" id="supports"></div>
+                        <div class="param-row"><label>Тип</label><select id="support-type"><option value="normal">Обычные</option><option value="tree">Древовидные</option></select></div>
+                        <div class="param-row"><label>Плотность</label><input type="number" id="support-density" value="20" step="5"><span class="unit">%</span></div>
+                        <div class="param-row"><label>Угол нависания</label><input type="number" id="support-angle" value="45" step="5"><span class="unit">°</span></div>
+                        <div class="param-row"><label>Расстояние от модели</label><input type="number" id="support-distance" value="0.2" step="0.05"><span class="unit">мм</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-material" class="tab-content">
+                    <div class="param-group"><h4>Материал</h4>
+                        <div class="param-row"><label>Тип</label><select id="material-type"><option value="pla">PLA</option><option value="abs">ABS</option><option value="petg">PETG</option><option value="tpu">TPU</option><option value="nylon">Nylon</option><option value="pc">PC</option><option value="asa">ASA</option></select></div>
+                        <div class="param-row"><label>Диаметр нити</label><input type="number" id="filament-diameter" value="1.75" step="0.05"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Диаметр сопла</label><input type="number" id="nozzle-diameter" value="0.4" step="0.05"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Расход</label><input type="number" id="flow-rate" value="100" step="1"><span class="unit">%</span></div>
+                    </div>
+                    <div class="param-group"><h4>Ретракция</h4>
+                        <div class="param-row"><label>Включить</label><input type="checkbox" id="retraction-enable" checked></div>
+                        <div class="param-row"><label>Расстояние</label><input type="number" id="retraction-distance" value="6.5" step="0.5"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Скорость</label><input type="number" id="retraction-speed" value="45" step="5"><span class="unit">мм/с</span></div>
+                        <div class="param-row"><label>Мин. длина</label><input type="number" id="retraction-min-length" value="1.5" step="0.5"><span class="unit">мм</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-advanced" class="tab-content">
+                    <div class="param-group"><h4>Адгезия</h4>
+                        <div class="param-row"><label>Тип</label><select id="adhesion-type"><option value="skirt">Юбка</option><option value="brim">Поля</option><option value="raft">Рафт</option><option value="none">Нет</option></select></div>
+                        <div class="param-row"><label>Ширина</label><input type="number" id="adhesion-width" value="8" step="1"><span class="unit">мм</span></div>
+                        <div class="param-row"><label>Расстояние</label><input type="number" id="adhesion-distance" value="3" step="0.5"><span class="unit">мм</span></div>
+                    </div>
+                    <div class="param-group"><h4>G-code</h4>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:11px; color:#a6adc8;">Стартовый</label>
+                            <textarea id="start-gcode" rows="2" style="background:#12121e; border:1px solid #3a3a4e; color:#cdd6f4; padding:4px 6px; border-radius:4px; font-family:monospace; font-size:11px; resize:vertical; width:100%;">G28 ; Домой
+G29 ; Авто-выравнивание
+G92 E0</textarea>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                            <label style="font-size:11px; color:#a6adc8;">Конечный</label>
+                            <textarea id="end-gcode" rows="2" style="background:#12121e; border:1px solid #3a3a4e; color:#cdd6f4; padding:4px 6px; border-radius:4px; font-family:monospace; font-size:11px; resize:vertical; width:100%;">M104 S0 ; Выключить сопло
+M140 S0 ; Выключить стол
+M84 ; Отключить моторы</textarea>
+                        </div>
+                    </div>
+                    <div class="param-group"><h4>Буфер</h4>
+                        <div class="param-row"><label>Размер</label><input type="number" id="buffer-size" value="4096" step="512"><span class="hint">байт</span></div>
+                        <div class="param-row"><label>Задержка</label><input type="number" id="command-delay" value="0" step="1"><span class="hint">мс</span></div>
+                    </div>
+                </div>
+
+                <div id="tab-calibration" class="tab-content">
+                    <div class="calibration-section">
+                        <h4 style="font-size:12px; color:#89b4fa; margin-bottom:4px;">Калибровка принтера</h4>
+                        <div class="calibration-row">
+                            <button class="primary" onclick="startCalibration('bed_level')">Уровень стола</button>
+                            <button class="primary" onclick="startCalibration('auto_bed_level')">Авто-выравнивание</button>
+                            <button class="success" onclick="startCalibration('extrusion')">Калибровка экструзии</button>
+                            <button class="warning" onclick="startCalibration('steps')">Калибровка шагов</button>
+                            <button onclick="startCalibration('pid_hotend')">PID Hotend</button>
+                            <button onclick="startCalibration('pid_bed')">PID Bed</button>
+                            <button class="warning" onclick="startCalibration('z_offset')">Z-смещение</button>
+                            <button class="danger" onclick="startCalibration('full')">Полная калибровка</button>
+                        </div>
+                        <div class="calibration-row">
+                            <button style="background:#f38ba8; color:#1a1a2e; border-color:#f38ba8;" onclick="abortCalibration()">⏹ Остановить</button>
+                            <span class="calibration-status" id="calibration-status">Готов</span>
+                        </div>
+                    </div>
+                    <div class="param-group" style="background:#2a2a3e;">
+                        <h4>Данные калибровки</h4>
+                        <div style="font-size:12px; line-height:1.6;">
+                            <div><span class="label">Сопло:</span> <span id="cal-temp-nozzle">--</span> °C</div>
+                            <div><span class="label">Стол:</span> <span id="cal-temp-bed">--</span> °C</div>
+                            <div><span class="label">Z-смещение:</span> <span id="cal-z-offset">--</span> мм</div>
+                            <div><span class="label">Шаги на мм (E):</span> <span id="cal-steps-e">--</span></div>
+                            <div><span class="label">Прогресс:</span> <span id="cal-progress">0%</span></div>
+                        </div>
+                        <div class="progress-container"><div class="progress-bar" id="cal-progress-bar" style="width:0%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="status-bar">
+                    <span class="item"><span class="label">Статус:</span> <span class="value" id="print-status">Готов</span></span>
+                    <span class="item"><span class="label">Прогресс:</span> <span class="value" id="print-progress">0%</span></span>
+                    <span class="item"><span class="label">Время:</span> <span class="value" id="print-time">0:00</span></span>
+                    <span class="item"><span class="label">Сопло:</span> <span class="value" id="print-temp">0°C</span></span>
+                    <span class="item"><span class="label">Стол:</span> <span class="value" id="print-bed-temp">0°C</span></span>
+                </div>
+                <div class="progress-container"><div class="progress-bar" id="print-progress-bar"></div></div>
+
+                <div class="log-area">
+                    <div id="printer-log"></div>
+                </div>
+
+            </div>
+        </aside>
+
+        <div class="viewer">
+            <div id="slicer-three-container"></div>
+            <div class="viewer-overlay">🔄 Вращение · Scroll Zoom · ПКМ Панорамирование</div>
+            <button class="view-reset" onclick="resetView()">🎯 Сброс вида</button>
+        </div>
+
+        <aside class="info-panel">
+            <div class="info-header">Информация о модели</div>
+            <div class="info-content" id="model-info">
+                <p><span class="label">Название:</span> <span id="model-name">—</span></p>
+                <p><span class="label">Размеры (мм):</span> <span id="model-size">—</span></p>
+                <p><span class="label">Объём (мм³):</span> <span id="model-volume">—</span></p>
+                <p><span class="label">Треугольники:</span> <span id="model-triangles">—</span></p>
+                <p><span class="label">Время печати:</span> <span id="model-print-time">—</span></p>
+            </div>
+            <div class="info-header" style="margin-top:8px;">Предпросмотр G-code</div>
+            <div class="info-content">
+                <canvas id="gcode-canvas" width="200" height="150"></canvas>
+                <div style="font-size:10px; color:#6c7086; margin-top:4px;">Первые 100 слоёв (имитация)</div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const container = document.getElementById('slicer-three-container');
+
+        let scene, camera, renderer, controls;
+        let modelMesh = null;
+        let animationId = null;
+
+        let connectedPrinter = false;
+        let lastGcodeFile = null;
+        let isPrinting = false;
+        let isCalibrating = false;
+        let calibrationActive = false;
+        let discovering = false;
+
+        // Переменная для хранения имени загруженной модели
+        let currentModelFilename = null;
+
+        // --- Инициализация 3D ---
+        function initThree() {
+            if (!container) return;
+            const w = container.clientWidth, h = container.clientHeight;
+            if (w === 0 || h === 0) { setTimeout(initThree, 200); return; }
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x12121e);
+
+            camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 500);
+            camera.position.set(24, 18, 30);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(w, h);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.target.set(0, 0, 0);
+            controls.minDistance = 5;
+            controls.maxDistance = 120;
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+            const dir = new THREE.DirectionalLight(0xffffff, 1.8);
+            dir.position.set(20, 40, 20);
+            dir.castShadow = true;
+            scene.add(dir);
+            const fill = new THREE.DirectionalLight(0x89b4fa, 0.3);
+            fill.position.set(-20, 10, -20);
+            scene.add(fill);
+
+            createBed();
+
+            const grid = new THREE.GridHelper(24, 24, 0x3a3a4e, 0x2a2a3e);
+            grid.position.y = 0.02;
+            scene.add(grid);
+
+            animate();
+            window.addEventListener('resize', onResize);
+        }
+
+        function createBed() {
+            const group = new THREE.Group();
+
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(26, 0.6, 26),
+                new THREE.MeshStandardMaterial({ color: 0x2a2a3e, roughness: 0.7, metalness: 0.3 })
+            );
+            base.position.y = -0.3;
+            base.receiveShadow = true;
+            base.castShadow = true;
+            group.add(base);
+
+            const surface = new THREE.Mesh(
+                new THREE.BoxGeometry(24, 0.1, 24),
+                new THREE.MeshStandardMaterial({ color: 0x3a3a4e, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.6 })
+            );
+            surface.position.y = 0.05;
+            surface.receiveShadow = true;
+            surface.castShadow = true;
+            group.add(surface);
+
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5e, roughness: 0.5, metalness: 0.4 });
+            [[12,0.1,0,0.4,0.1,24], [-12,0.1,0,0.4,0.1,24], [0,0.1,12,24,0.1,0.4], [0,0.1,-12,24,0.1,0.4]].forEach(p => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(p[3], p[4], p[5]), frameMat);
+                mesh.position.set(p[0], p[1], p[2]);
+                group.add(mesh);
+            });
+
+            const markerMat = new THREE.MeshStandardMaterial({ color: 0x89b4fa, emissive: 0x89b4fa, emissiveIntensity: 0.2 });
+            [[-11.5,0.1,-11.5], [11.5,0.1,-11.5], [-11.5,0.1,11.5], [11.5,0.1,11.5]].forEach(p => {
+                const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 8), markerMat);
+                mesh.position.set(p[0], p[1], p[2]);
+                group.add(mesh);
+            });
+
+            scene.add(group);
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function onResize() {
+            if (!container || !camera || !renderer) return;
+            const w = container.clientWidth, h = container.clientHeight;
+            if (w === 0 || h === 0) return;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+
+        function resetView() {
+            if (!camera || !controls) return;
+            camera.position.set(24, 18, 30);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        function disposeObject3D(obj) {
+            if (!obj) return;
+            obj.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+                    else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); }
+                }
+            });
+            if (obj.parent) obj.parent.remove(obj);
+        }
+
+        // --- Загрузка STL на сервер ---
+        document.getElementById('stl-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('/upload_stl', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    currentModelFilename = data.filename;
+                    document.getElementById('uploaded-filename').textContent = data.filename;
+                    document.getElementById('model-filename').textContent = data.filename;
+                    addLog('✅ Модель загружена: ' + data.filename, 'ok');
+                    // Загружаем модель в 3D-вьювер
+                    loadModelIntoViewer(data.filename);
+                } else {
+                    addLog('❌ Ошибка загрузки: ' + data.error, 'error');
+                }
+            })
+            .catch(err => {
+                addLog('❌ Ошибка сети: ' + err.message, 'error');
+            });
+            e.target.value = '';
+        });
+
+        // --- Загрузка модели в 3D-вьювер (по имени файла) ---
+        function loadModelIntoViewer(filename) {
+            if (!scene) return;
+            if (modelMesh) {
+                disposeObject3D(modelMesh);
+                modelMesh = null;
+            }
+            const loader = new THREE.STLLoader();
+            loader.load('/model/' + filename, (geometry) => {
+                const material = new THREE.MeshStandardMaterial({ color: 0x89b4fa, roughness: 0.3, metalness: 0.1 });
+                const mesh = new THREE.Mesh(geometry, material);
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                mesh.position.sub(center);
+                mesh.position.y += 0.5;
+                scene.add(mesh);
+                modelMesh = mesh;
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const dist = maxDim * 1.5 + 2;
+                camera.position.set(dist * 0.7, dist * 0.5, dist * 0.9);
+                controls.target.set(0, 0, 0);
+                controls.update();
+                // Обновляем информацию о модели (упрощённо)
+                document.getElementById('model-name').textContent = filename;
+                document.getElementById('model-size').textContent = size.x.toFixed(1) + ' × ' + size.y.toFixed(1) + ' × ' + size.z.toFixed(1);
+                document.getElementById('model-volume').textContent = (size.x * size.y * size.z).toFixed(0);
+                document.getElementById('model-triangles').textContent = (geometry.attributes.position.count / 3).toFixed(0);
+            }, undefined, (error) => {
+                addLog('❌ Ошибка загрузки модели: ' + error, 'error');
+            });
+        }
+
+        // --- Слайсинг (отправка на сервер) ---
+        function sliceModel() {
+            if (!currentModelFilename) {
+                addLog('❌ Сначала загрузите модель.', 'error');
+                return;
+            }
+            const settings = collectSettings();
+            // Отправляем через сокет с указанием filename
+            socket.emit('printer_slice', {
+                filename: currentModelFilename,
+                settings: settings
+            });
+            addLog('🍰 Слайсинг запущен для ' + currentModelFilename, 'info');
+            document.getElementById('print-status').textContent = 'Слайсинг...';
+        }
+
+        function collectSettings() {
+            const get = id => document.getElementById(id);
+            const getChecked = id => get(id)?.checked || false;
+            return {
+                layerHeight: parseFloat(get('layer-height').value) || 0.2,
+                lineWidth: parseFloat(get('line-width').value) || 0.4,
+                wallThickness: parseFloat(get('wall-thickness').value) || 1.2,
+                wallCount: parseInt(get('wall-count').value) || 3,
+                infill: parseInt(get('infill').value) || 20,
+                infillPattern: get('infill-pattern').value,
+                infillOverlap: parseInt(get('infill-overlap').value) || 15,
+                topLayers: parseInt(get('top-layers').value) || 4,
+                bottomLayers: parseInt(get('bottom-layers').value) || 4,
+                printSpeed: parseInt(get('print-speed').value) || 50,
+                travelSpeed: parseInt(get('travel-speed').value) || 150,
+                outerWallSpeed: parseInt(get('outer-wall-speed').value) || 30,
+                innerWallSpeed: parseInt(get('inner-wall-speed').value) || 45,
+                topSpeed: parseInt(get('top-speed').value) || 30,
+                bottomSpeed: parseInt(get('bottom-speed').value) || 20,
+                infillSpeed: parseInt(get('infill-speed').value) || 60,
+                acceleration: parseInt(get('acceleration').value) || 1000,
+                travelAcceleration: parseInt(get('travel-acceleration').value) || 2000,
+                nozzleTemp: parseInt(get('nozzle-temp').value) || 200,
+                bedTemp: parseInt(get('bed-temp').value) || 60,
+                initialNozzleTemp: parseInt(get('initial-nozzle-temp').value) || 200,
+                initialBedTemp: parseInt(get('initial-bed-temp').value) || 60,
+                fanSpeed: parseInt(get('fan-speed').value) || 100,
+                minFanSpeed: parseInt(get('min-fan-speed').value) || 0,
+                maxFanSpeed: parseInt(get('max-fan-speed').value) || 100,
+                supports: getChecked('supports'),
+                supportType: get('support-type').value,
+                supportDensity: parseInt(get('support-density').value) || 20,
+                supportAngle: parseInt(get('support-angle').value) || 45,
+                supportDistance: parseFloat(get('support-distance').value) || 0.2,
+                materialType: get('material-type').value,
+                filamentDiameter: parseFloat(get('filament-diameter').value) || 1.75,
+                nozzleDiameter: parseFloat(get('nozzle-diameter').value) || 0.4,
+                flowRate: parseInt(get('flow-rate').value) || 100,
+                retractionEnable: getChecked('retraction-enable'),
+                retractionDistance: parseFloat(get('retraction-distance').value) || 6.5,
+                retractionSpeed: parseInt(get('retraction-speed').value) || 45,
+                retractionMinLength: parseFloat(get('retraction-min-length').value) || 1.5,
+                adhesionType: get('adhesion-type').value,
+                adhesionWidth: parseInt(get('adhesion-width').value) || 8,
+                adhesionDistance: parseFloat(get('adhesion-distance').value) || 3,
+                startGcode: get('start-gcode').value,
+                endGcode: get('end-gcode').value,
+                bufferSize: parseInt(get('buffer-size').value) || 4096,
+                commandDelay: parseInt(get('command-delay').value) || 0,
+                printerProfile: document.getElementById('printer-select').value,
+            };
+        }
+
+        function downloadGCode() {
+            if (!lastGcodeFile) {
+                addLog('❌ Нет G-кода для скачивания.', 'error');
+                return;
+            }
+            window.open('/gcode/' + lastGcodeFile, '_blank');
+        }
+
+        // --- Остальные функции (принтер, калибровка, логи) ---
+        function connectPrinter() { /* ... */ }
+        function disconnectPrinter() { /* ... */ }
+        function discoverPrinters() { /* ... */ }
+        function startPrint() { /* ... */ }
+        function pausePrint() { /* ... */ }
+        function stopPrint() { /* ... */ }
+        function clearBed() { /* ... */ }
+        function startCalibration(type) { /* ... */ }
+        function abortCalibration() { /* ... */ }
+
+        function addLog(text, type = 'info') {
+            const log = document.getElementById('printer-log');
+            if (!log) return;
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = '[' + time + '] ';
+            const msgSpan = document.createElement('span');
+            msgSpan.className = 'log-' + type;
+            msgSpan.textContent = text;
+            entry.appendChild(timeSpan);
+            entry.appendChild(msgSpan);
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Socket обработчики
+        socket.on('printer_log', (data) => {
+            addLog(data.text, data.type || 'info');
+            if (data.type === 'calibration') {
+                if (data.progress !== undefined) {
+                    const pct = Math.round(data.progress);
+                    document.getElementById('cal-progress').textContent = pct + '%';
+                    document.getElementById('cal-progress-bar').style.width = pct + '%';
+                }
+                if (data.status) {
+                    document.getElementById('calibration-status').textContent = data.status;
+                    if (data.status === 'Завершена') {
+                        document.getElementById('calibration-status').className = 'calibration-status ok';
+                        calibrationActive = false;
+                        isCalibrating = false;
+                    } else if (data.status === 'Ошибка') {
+                        document.getElementById('calibration-status').className = 'calibration-status error';
+                        calibrationActive = false;
+                        isCalibrating = false;
+                    }
+                }
+                if (data.temp_nozzle !== undefined) document.getElementById('cal-temp-nozzle').textContent = data.temp_nozzle;
+                if (data.temp_bed !== undefined) document.getElementById('cal-temp-bed').textContent = data.temp_bed;
+                if (data.z_offset !== undefined) document.getElementById('cal-z-offset').textContent = data.z_offset.toFixed(3);
+                if (data.steps_e !== undefined) document.getElementById('cal-steps-e').textContent = data.steps_e.toFixed(2);
+            }
+        });
+
+        socket.on('printer_status', (data) => {
+            console.log('📡 printer_status received:', data);
+            if (data.status !== 'disconnected' && data.status !== 'offline') {
+                connectedPrinter = true;
+                document.getElementById('status-dot').className = 'status-dot online';
+                if (data.status === 'printing' || data.status === 'paused') {
+                    document.getElementById('status-dot').className = 'status-dot printing';
+                }
+                let statusText = 'Подключено';
+                if (data.status === 'idle') statusText = 'Готов';
+                else if (data.status === 'printing') statusText = 'Печать...';
+                else if (data.status === 'paused') statusText = 'Пауза';
+                else if (data.status === 'ready') statusText = 'Готов';
+                document.getElementById('status-text').textContent = statusText;
+            } else {
+                connectedPrinter = false;
+                document.getElementById('status-dot').className = 'status-dot offline';
+                document.getElementById('status-text').textContent = 'Отключено';
+            }
+            let displayStatus = data.status || 'неизвестно';
+            if (displayStatus === 'idle') displayStatus = 'Готов';
+            if (displayStatus === 'connected') displayStatus = 'Подключено';
+            if (displayStatus === 'ready') displayStatus = 'Готов';
+            document.getElementById('print-status').textContent = displayStatus;
+
+            if (data.progress !== undefined) {
+                const pct = Math.round(data.progress);
+                document.getElementById('print-progress').textContent = pct + '%';
+                document.getElementById('print-progress-bar').style.width = pct + '%';
+            }
+            if (data.temperature !== undefined) document.getElementById('print-temp').textContent = data.temperature + '°C';
+            if (data.bed_temp !== undefined) document.getElementById('print-bed-temp').textContent = data.bed_temp + '°C';
+            if (data.time !== undefined) document.getElementById('print-time').textContent = data.time;
+            if (data.gcode) {
+                lastGcodeFile = data.gcode;
+                addLog('✅ G-code создан: ' + data.gcode, 'ok');
+                document.getElementById('print-status').textContent = 'Готов к печати';
+                drawGcodePreview();
+            }
+        });
+
+        function drawGcodePreview() {
+            const canvas = document.getElementById('gcode-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#12121e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < 50; i++) {
+                const x1 = Math.random() * canvas.width;
+                const y1 = Math.random() * canvas.height;
+                const x2 = Math.random() * canvas.width;
+                const y2 = Math.random() * canvas.height;
+                ctx.strokeStyle = 'hsl(200, 70%, ' + (40 + Math.random() * 40) + '%)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#a6adc8';
+            ctx.font = '10px monospace';
+            ctx.fillText('Предпросмотр G-code', 10, 20);
+            ctx.fillStyle = '#6c7086';
+            ctx.fillText('(имитация)', 10, 35);
+        }
+
+        // Инициализация при загрузке
+        window.addEventListener('DOMContentLoaded', function() {
+            initThree();
+            loadPrinterPreset();
+            addLog('🖨️ KLHSlicer v3.6 готов.', 'ok');
+            addLog('💡 Загрузите STL-модель и настройте параметры.', 'info');
+            addLog('🔧 Для подключения по WiFi выберите протокол Moonraker (Klipper) и порт 7125.', 'info');
+            addLog('ℹ️ Если принтер не подключён, печать будет работать в режиме симуляции.', 'info');
+            // Проверка наличия модели из предыдущей сессии (можно добавить)
+        });
+    </script>
+</body>
+</html>

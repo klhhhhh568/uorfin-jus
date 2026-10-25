@@ -1,0 +1,3971 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Урфин Джус — Чат и Симуляция</title>
+    <style>
+        /* ---- Общие стили ---- */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        #main-container {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        #chat-list-panel {
+            width: 200px;
+            background: #313244;
+            border-radius: 12px;
+            padding: 0.5rem;
+            max-height: 80vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        #chat-list-panel .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        #chat-list-panel .header button {
+            background: #89b4fa;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 18px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            color: #1e1e2e;
+            padding: 0;
+        }
+        #chat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .chat-item {
+            cursor: pointer;
+            padding: 0.3rem;
+            border-bottom: 1px solid #45475a;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-item:hover {
+            background: #45475a;
+            border-radius: 4px;
+        }
+        #left-col {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            min-width: 300px;
+        }
+        #right-col {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-width: 250px;
+        }
+        #dual-panel {
+            background: #313244;
+            border-radius: 12px;
+            padding: 1rem;
+            max-height: 80vh;
+            overflow-y: auto;
+            height: 100%;
+        }
+        #chat {
+            width: 100%;
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid #45475a;
+            border-radius: 12px;
+            padding: 1rem;
+            background: #313244;
+        }
+        .msg {
+            margin-bottom: 0.8rem;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .user {
+            background: #89b4fa;
+            color: #1e1e2e;
+            align-self: flex-end;
+            text-align: right;
+            margin-left: auto;
+        }
+        .assistant {
+            background: #a6e3a1;
+            color: #1e1e2e;
+            align-self: flex-start;
+        }
+        .system {
+            background: #f9e2af;
+            color: #1e1e2e;
+            align-self: center;
+            font-style: italic;
+        }
+        #input-area {
+            display: flex;
+            margin-top: 0.5rem;
+            gap: 0.5rem;
+        }
+        #message {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            background: #45475a;
+            color: #cdd6f4;
+        }
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #89b4fa;
+            color: #1e1e2e;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { opacity: 0.8; }
+        .panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .panel button {
+            background: #45475a;
+            color: #cdd6f4;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+        /* ---- Модальные окна ---- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+        }
+        .modal-content {
+            background: #313244;
+            padding: 20px;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1400px;
+            max-height: 95vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-content input, .modal-content select {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: none;
+            background: #45475a;
+            color: #cdd6f4;
+            margin-bottom: 0.5rem;
+            box-sizing: border-box;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: -10px;
+        }
+        .close:hover { color: white; }
+        /* ---- ROS2 симуляция ---- */
+        .workspace {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .view-area {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            min-width: 400px;
+        }
+        .side-panel {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 200px;
+        }
+        #three-container {
+            width: 100%;
+            height: 500px;
+            min-height: 500px;
+            background: #1e1e2e;
+            border-radius: 8px;
+            border: 1px solid #45475a;
+        }
+        .team-panel {
+            background: #313244;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        .team-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .team-btn {
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .team-btn.blue { background: #89b4fa; color: #1e1e2e; }
+        .team-btn.yellow { background: #f9e2af; color: #1e1e2e; }
+        .team-btn.red { background: #f38ba8; color: #1e1e2e; }
+        .team-btn.green { background: #a6e3a1; color: #1e1e2e; }
+        .team-btn.active { border: 2px solid white; }
+        .robot-chat {
+            height: 80px;
+            overflow-y: auto;
+            border: 1px solid #45475a;
+            border-radius: 8px;
+            padding: 0.5rem;
+            background: #1e1e2e;
+            margin-top: 0.3rem;
+            font-size: 0.9rem;
+        }
+        #team-terminals {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .terminal-box {
+            flex: 1;
+            background: #313244;
+            border-radius: 8px;
+            padding: 0.5rem;
+            border: 1px solid #45475a;
+            min-height: 200px;
+            display: none;
+            min-width: 150px;
+        }
+        .terminal-box.active { display: block; }
+        .terminal-box textarea {
+            width: 100%;
+            height: 40px;
+            background: #45475a;
+            color: #cdd6f4;
+            border: none;
+            border-radius: 4px;
+            padding: 0.2rem;
+        }
+        .terminal-output {
+            height: 80px;
+            overflow-y: auto;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            padding: 0.2rem;
+            background: #1e1e2e;
+            margin-bottom: 0.3rem;
+            font-size: 0.85rem;
+        }
+        /* ---- Стили для модального окна генератора ---- */
+        #generatorModal .modal-content {
+            background: #1e1e2e;
+            padding: 0;
+            max-width: 1200px;
+            height: 90vh;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #generatorModal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: #25253a;
+            border-bottom: 1px solid #3a3a4e;
+            flex-shrink: 0;
+        }
+        #generatorModal .modal-header h3 { margin: 0; color: #89b4fa; }
+        #generatorModal .modal-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        #generatorModal .modal-left {
+            flex: 1;
+            padding: 16px;
+            background: #1e1e2e;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 300px;
+        }
+        #generatorModal .modal-left label { color: #cdd6f4; font-weight: 600; }
+        #generatorModal .modal-left textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: #2a2a3e;
+            color: #cdd6f4;
+            border: 1px solid #3a3a4e;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 14px;
+            min-height: 120px;
+        }
+        #generatorModal .modal-left textarea:focus { outline: 2px solid #89b4fa; }
+        #generatorModal .modal-left button {
+            background: #89b4fa;
+            color: #1e1e2e;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #generatorModal .modal-left .status {
+            color: #a6adc8;
+            font-size: 14px;
+            min-height: 24px;
+        }
+        #generatorModal .modal-left .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        #generatorModal .modal-left .action-buttons button {
+            background: #45475a;
+            color: #cdd6f4;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #generatorModal .modal-right {
+            flex: 2;
+            background: #12121e;
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+        }
+        #generatorModal .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(18,18,30,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+        #generatorModal .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #generatorModal .loading-overlay .logo {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #89b4fa, #a6e3a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+        #generatorModal .loading-overlay .loader {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #3a3a4e;
+            border-top-color: #89b4fa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        #generatorModal .loading-overlay .sub {
+            color: #6c7086;
+            margin-top: 12px;
+        }
+        #generatorModal .viewer-container {
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* ---- Стили для модального окна слайсера (iframe) ---- */
+        #slicerModal .modal-content {
+            background: #1e1e32;
+            padding: 0;
+            width: 95%;
+            max-width: 98%;
+            height: 95vh;
+            max-height: 95vh;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        #slicerModal .modal-content .close {
+            position: absolute;
+            right: 20px;
+            top: 12px;
+            z-index: 10;
+            font-size: 32px;
+            cursor: pointer;
+            color: #cdd6f4;
+            background: rgba(0,0,0,0.3);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            line-height: 1;
+        }
+        #slicerModal iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #1e1e32;
+        }
+        /* ---- Управление роботом ---- */
+        .robot-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+            align-items: center;
+            background: #313244;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+        .robot-controls button {
+            padding: 0.3rem 0.8rem;
+            font-size: 1.1rem;
+            background: #45475a;
+            color: #cdd6f4;
+            border: 1px solid #3a3a4e;
+            border-radius: 4px;
+            min-width: 36px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .robot-controls button:hover { background: #585b70; }
+        .robot-controls .key-hint {
+            font-size: 0.7rem;
+            color: #6c7086;
+            display: block;
+            text-align: center;
+        }
+        #active-robot-info {
+            font-size: 0.9rem;
+            color: #a6adc8;
+            margin-right: 0.5rem;
+        }
+        #robot-health, #robot-battery {
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+        }
+        /* ============ 3D МОЗГ (свободно плавающий) ============ */
+        #brain-widget {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 340px;
+            height: 340px;
+            z-index: 999;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        #brain-widget.expanded {
+            width: 660px;
+            height: 500px;
+        }
+        #brain-widget canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            filter: drop-shadow(0 0 15px rgba(100,180,255,0.45));
+            transition: filter 0.3s ease;
+        }
+        #brain-widget:hover canvas {
+            filter: drop-shadow(0 0 30px rgba(100,180,255,0.85));
+        }
+        #brain-widget.dragging canvas {
+            cursor: grabbing;
+            filter: drop-shadow(0 0 40px rgba(120,200,255,1));
+        }
+        #brain-widget .hemi-label {
+            position: absolute;
+            font-size: 12px;
+            color: #a6e3ff;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(137,220,255,0.9), 0 0 4px rgba(0,0,0,0.9);
+            pointer-events: none;
+            text-align: center;
+            background: rgba(15,25,50,0.75);
+            padding: 3px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(137,220,255,0.5);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            white-space: nowrap;
+        }
+        #brain-widget.split .hemi-label { opacity: 1; }
+        #brain-widget .hemi-label.left  { left: 15%; top: 85%; transform: translateX(-50%); }
+        #brain-widget .hemi-label.right { right: 15%; top: 85%; transform: translateX(50%); }
+        #brain-widget .brain-hint {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #6c7086;
+            font-style: italic;
+            pointer-events: none;
+            text-shadow: 0 0 6px rgba(0,0,0,0.9);
+            opacity: 0.7;
+            white-space: nowrap;
+        }
+
+        /* ============ ПАНЕЛЬ ДЕТАЛЕЙ ПОЛУШАРИЯ (с Python-редактором) ============ */
+        #brain-panel {
+            position: fixed;
+            top: 50%;
+            left: 30px;
+            transform: translateY(-50%);
+            width: 520px;
+            max-height: 88vh;
+            overflow: hidden;
+            z-index: 2100;
+            background: rgba(10,14,28,0.99);
+            border: 1px solid rgba(100,180,255,0.5);
+            border-radius: 12px;
+            padding: 0;
+            display: none;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 0 40px rgba(80,150,255,0.5), 0 15px 50px rgba(0,0,0,0.7);
+            user-select: none;
+            flex-direction: column;
+        }
+        #brain-panel.visible { display: flex; }
+        #brain-panel.dragging {
+            box-shadow: 0 0 60px rgba(100,180,255,0.9), 0 20px 60px rgba(0,0,0,0.85);
+            transition: none;
+        }
+        #brain-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(100,180,255,0.25);
+            background: rgba(20,30,55,0.7);
+            border-radius: 12px 12px 0 0;
+            flex-shrink: 0;
+        }
+        #brain-panel .panel-header h4 {
+            margin: 0;
+            color: #89b4fa;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #brain-panel .model-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(137,180,250,0.2);
+            color: #a6e3ff;
+            font-family: monospace;
+            pointer-events: none;
+        }
+        #brain-panel .close-btn {
+            cursor: pointer;
+            color: #f38ba8;
+            font-weight: bold;
+            font-size: 18px;
+            line-height: 1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+            user-select: none;
+        }
+        #brain-panel .close-btn:hover { background: rgba(243,139,168,0.25); }
+        #brain-panel .panel-body {
+            padding: 14px 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        #brain-panel .stats {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+        #brain-panel .stats .stat {
+            flex: 1;
+            background: rgba(30,40,70,0.7);
+            padding: 6px 8px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(100,180,255,0.2);
+        }
+        #brain-panel .stats .stat .num {
+            color: #a6e3ff;
+            font-weight: bold;
+            font-size: 15px;
+            display: block;
+        }
+        #brain-panel .stats .stat .lbl {
+            color: #6c7086;
+            font-size: 10px;
+        }
+        #brain-panel .code-label {
+            color: #6c7086;
+            font-size: 11px;
+            margin: 10px 0 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #brain-panel .code-label .hint {
+            color: #f9e2af;
+            font-size: 10px;
+            font-style: italic;
+        }
+        #brain-panel .code-editor {
+            width: 100%;
+            min-height: 340px;
+            max-height: 420px;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            background: rgba(5,10,20,0.9);
+            color: #cdd6f4;
+            border: 1px solid rgba(100,180,255,0.25);
+            border-radius: 8px;
+            resize: vertical;
+            outline: none;
+            user-select: text;
+            -webkit-user-select: text;
+            tab-size: 4;
+            white-space: pre;
+            overflow: auto;
+        }
+        #brain-panel .code-editor:focus {
+            border-color: rgba(137,180,250,0.7);
+            box-shadow: 0 0 0 2px rgba(137,180,250,0.15);
+        }
+        #brain-panel .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        #brain-panel .btn-row button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #brain-panel .btn-save {
+            background: #89b4fa;
+            color: #1e1e2e;
+        }
+        #brain-panel .btn-save:hover { background: #74a7e8; }
+        #brain-panel .btn-save:disabled {
+            background: #45475a;
+            color: #6c7086;
+            cursor: not-allowed;
+        }
+        #brain-panel .btn-revert {
+            background: rgba(137,180,250,0.15);
+            color: #cdd6f4;
+            border: 1px solid rgba(137,180,250,0.3) !important;
+        }
+        #brain-panel .btn-revert:hover { background: rgba(137,180,250,0.3); }
+        #brain-panel .btn-cross {
+            background: rgba(249,226,175,0.15);
+            color: #f9e2af;
+            border: 1px solid rgba(249,226,175,0.3) !important;
+        }
+        #brain-panel .btn-cross:hover { background: rgba(249,226,175,0.3); }
+        #brain-panel .save-status {
+            margin-top: 8px;
+            font-size: 11px;
+            min-height: 16px;
+            text-align: center;
+        }
+        #brain-panel .save-status.ok { color: #a6e3a1; }
+        #brain-panel .save-status.err { color: #f38ba8; }
+        #brain-panel .save-status.info { color: #89b4fa; }
+
+        /* ---- Адаптивность ---- */
+        @media (max-width: 768px) {
+            #main-container { flex-direction: column; }
+            #right-col { width: 100%; }
+            #three-container { height: 300px; min-height: 300px; }
+            #printer-three-container { height: 300px; min-height: 300px; }
+            #chat-list-panel { width: 100%; max-height: 200px; }
+            #slicerModal .modal-content { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; }
+            #generatorModal .modal-body { flex-direction: column; }
+            #generatorModal .modal-left { min-width: auto; }
+            #generatorModal .modal-right { min-height: 300px; }
+            .robot-controls button { padding: 0.2rem 0.5rem; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🤖 Урфин Джус</h2>
+
+    <!-- ============ 3D МОЗГ (свободно плавающий) ============ -->
+    <div id="brain-widget">
+        <div class="hemi-label left"  id="hemi-label-left">ИНЖЕНЕР · qwen2.5:3b</div>
+        <div class="hemi-label right" id="hemi-label-right">КРИТИК · qwen2.5:7b</div>
+        <div class="brain-hint" id="brain-hint">ЛКМ — перетащить · 2× клик — разделить</div>
+    </div>
+
+    <!-- ============ ПАНЕЛЬ ДЕТАЛЕЙ ПОЛУШАРИЯ ============ -->
+    <div id="brain-panel">
+        <div class="panel-header" id="brain-panel-header">
+            <h4 id="brain-panel-title">ПОЛУШАРИЕ</h4>
+            <span class="close-btn" id="brain-panel-close">✕</span>
+        </div>
+        <div class="panel-body">
+            <div class="stats" id="brain-panel-stats"></div>
+            <div class="code-label">
+                <span>Python-код нейронной карты:</span>
+                <span class="hint">редактируй и сохраняй</span>
+            </div>
+            <textarea class="code-editor" id="brain-panel-code" spellcheck="false"></textarea>
+            <div class="btn-row">
+                <button class="btn-save"   id="brain-panel-save">💾 Сохранить</button>
+                <button class="btn-revert" id="brain-panel-revert">↺ Сбросить</button>
+                <button class="btn-cross"  id="brain-panel-crosstalk">⚡ Cross-talk</button>
+            </div>
+            <div class="save-status" id="brain-panel-status"></div>
+        </div>
+    </div>
+
+    <!-- Выбор языка -->
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; width: 100%; max-width: 1400px;">
+        <label for="language-select" style="font-weight: bold;">🌐 Язык:</label>
+        <select id="language-select" style="padding: 0.4rem 0.8rem; border-radius: 6px; background: #45475a; color: #cdd6f4; border: none; font-size: 1rem;">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+        </select>
+    </div>
+
+    <div id="main-container">
+        <!-- Панель списка чатов -->
+        <div id="chat-list-panel">
+            <div class="header">
+                <strong>💬 Чаты</strong>
+                <button onclick="createNewChat()">+</button>
+            </div>
+            <div id="chat-list"></div>
+        </div>
+
+        <!-- Левая колонка: чат + панель -->
+        <div id="left-col">
+            <div id="chat"></div>
+            <div id="input-area">
+                <input type="text" id="message" placeholder="Введите сообщение..." autofocus>
+                <button onclick="window.sendMessage()">→</button>
+            </div>
+            <div class="panel">
+                <button onclick="openSlicerModal()">🖨️ KLHSlicer</button>
+                <button onclick="openGenerator()">⚙️ Генерация</button>
+                <button onclick="window.openROS2()">🤖 ROS2</button>
+                <button onclick="window.directCommand('memory_skill', '/clear', {})">🧹 Очистить память</button>
+            </div>
+        </div>
+
+        <!-- Правая колонка: двуполушарный анализ -->
+        <div id="right-col">
+            <div id="dual-panel">
+                <div class="dual-header" style="font-weight: bold; margin-bottom: 0.5rem;">🧠 Анализ двух полушарий</div>
+                <div id="dual-content"><div id="dual-status">Ожидание запроса...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модальное окно генератора (PicoGK) ===== -->
+    <div id="generatorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎨 PicoGK — Генеративный CAD (воксельное ядро LEAP 71)</h3>
+                <span class="close" onclick="closeGenerator()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-left">
+                    <label>Опиши деталь:</label>
+                    <textarea id="promptInput"
+                              placeholder="Например: сфера радиусом 10Например: цилиндр радиусом 5, высотой 10 для крепежа&#10;или: сфера радиусом 20&#10;или: шестерня с 12 зубьями и модулем 2#10;или: куб 30x30x30Например: цилиндр радиусом 5, высотой 10 для крепежа&#10;или: сфера радиусом 20&#10;или: шестерня с 12 зубьями и модулем 2#10;или: полая сфера внешний радиус 15 толщина 2Например: цилиндр радиусом 5, высотой 10 для крепежа&#10;или: сфера радиусом 20&#10;или: шестерня с 12 зубьями и модулем 2#10;или: решётка из 4 сфер соединённых балками"></textarea>
+
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label style="flex: 1;">Вариантов:</label>
+                        <input type="number" id="num-variants" value="3" min="1" max="5"
+                               style="width: 60px; padding: 4px; background: #45475a; color: #cdd6f4; border: none; border-radius: 4px;">
+                    </div>
+
+                    <button id="generateBtn" onclick="generateModelAdvanced()">🧠 LLM → PicoGK → STL</button>
+                    <div class="status" id="generation-status"></div>
+
+                    <!-- Прогресс -->
+                    <div id="cad-progress" style="display:none; padding: 8px; background: rgba(30,40,70,0.5); border-radius: 6px; font-size: 12px; color: #89b4fa;">
+                        <span id="cad-progress-text"></span>
+                    </div>
+
+                    <!-- Варианты -->
+                    <div id="variants-panel" style="display:none;">
+                        <label style="font-size: 11px; color: #6c7086;">ВАРИАНТЫ (клик — показать):</label>
+                        <div id="variants-list" style="display:flex; flex-direction:column; gap:4px; max-height: 200px; overflow-y:auto;"></div>
+                    </div>
+
+                    <!-- Действия -->
+                    <div class="action-buttons">
+                        <button onclick="fitCurrentModel()" style="background:#89b4fa; color:#1e1e2e;">🔍 Подогнать вид</button>
+                        <button onclick="downloadCurrentVariant()">💾 Скачать STL</button>
+                        <button onclick="sendToSlicer()">🍰 Слайсинг</button>
+                        <button onclick="explodeCurrentModel()" id="explode-btn" style="background:#a6e3a1; color:#1e1e2e;" disabled>🔧 Разобрать на части</button>
+                        <button onclick="togglePhysics()" id="physics-gen-btn" style="background:#f9e2af; color:#1e1e2e;" disabled>🔬 Физика</button>
+                        <button onclick="restoreAssembled()" id="restore-btn" style="display:none;">🧩 Собрать обратно</button>
+                    </div>
+
+                    <!-- Метаданные -->
+                    <div id="cad-metadata" style="font-size: 11px; color: #6c7086; margin-top: 8px;"></div>
+                </div>
+                <div class="modal-right">
+                    <div id="loadingOverlay" class="loading-overlay">
+                        <div class="logo">PicoGK</div>
+                        <div class="loader"></div>
+                        <div class="sub">Строю воксельную модель...</div>
+                    </div>
+                    <div id="viewer-container" class="viewer-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модальное окно ROS2 ===== -->
+    <div id="ros2Modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="window.closeROS2()">&times;</span>
+            <h3>🤖 3D Симуляция и управление роботами</h3>
+            <div class="control-row" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem;">
+                <select id="robot-type-select" style="width:150px;">
+                    <option value="robot">Робот</option>
+                    <option value="drone">Дрон</option>
+                </select>
+                <button onclick="window.addRobot()">➕ Добавить робота</button>
+                <button onclick="window.removeRobot()" style="background:#f38ba8;">❌ Удалить</button>
+                <select id="robot-select" style="width:200px;"></select>
+                <label style="margin-left:1rem;">Поле: <input type="range" id="grid-size" min="10" max="100" value="50" oninput="window.changeGridSize(this.value)"></label>
+                <select id="location-select" style="width:200px;" onchange="window.changeLocation()">
+                    <option value="walk_training">Локация 1: Обучение</option>
+                    <option value="obstacle_course">Локация 2: Препятствия</option>
+                    <option value="capture_points">Локация 3: Захват точек</option>
+                </select>
+                <button onclick="window.addCustomPoint()">📍 Точка</button>
+                <button onclick="window.removeCustomPoint()">❌</button>
+                <button onclick="window.clearCustomPoints()">🗑️</button>
+                <button onclick="document.getElementById('model-upload').click()">📁 Модель</button>
+                <input type="file" id="model-upload" accept=".zip" style="display:none" onchange="window.uploadModel(this)">
+                <button onclick="window.openCommandList()">📜 Список команд</button>
+            </div>
+
+            <!-- Управление роботом -->
+            <div class="robot-controls" id="robot-controls">
+                <span id="active-robot-info">Активный: нет</span>
+                <span id="robot-health">❤️ 100%</span>
+                <span id="robot-battery">🔋 100%</span>
+                <button onclick="window.sendRobotCommandStr('move_forward')">⬆️ <span class="key-hint">W</span></button>
+                <button onclick="window.sendRobotCommandStr('move_backward')">⬇️ <span class="key-hint">S</span></button>
+                <button onclick="window.sendRobotCommandStr('turn_left')">⬅️ <span class="key-hint">A</span></button>
+                <button onclick="window.sendRobotCommandStr('turn_right')">➡️ <span class="key-hint">D</span></button>
+                <button onclick="window.sendRobotCommandStr('stop')">⏹ <span class="key-hint">Space</span></button>
+                <button onclick="window.sendRobotCommandStr('sit')">🪑 Сидеть</button>
+                <button onclick="window.sendRobotCommandStr('stand')">🧍 Встать</button>
+                <button onclick="window.sendRobotCommandStr('attack')">⚔️ Атака</button>
+                <button onclick="window.sendRobotCommandStr('takeoff')">🛫 Взлёт</button>
+                <button onclick="window.sendRobotCommandStr('land')">🛬 Посадка</button>
+            </div>
+
+            <div class="workspace">
+                <div class="view-area">
+                    <div id="three-container"></div>
+                    <div class="team-panel">
+                        <div><strong>Команды</strong></div>
+                        <div class="team-buttons">
+                            <button class="team-btn blue" onclick="window.selectTeam('blue')">Синяя</button>
+                            <button class="team-btn yellow" onclick="window.selectTeam('yellow')">Жёлтая</button>
+                            <button class="team-btn red" onclick="window.selectTeam('red')">Красная</button>
+                            <button class="team-btn green" onclick="window.selectTeam('green')">Зелёная</button>
+                        </div>
+                        <div style="margin-bottom:0.3rem;">Текущая: <span id="current-team">нет</span></div>
+                        <button onclick="window.assignToTeam()">➕ В команду</button>
+                        <select id="leader-select" style="width:150px; margin-left:0.3rem;"></select>
+                        <button onclick="window.setLeader()">👑 Лидер</button>
+                    </div>
+                    <div id="team-terminals">
+                        <div class="terminal-box" id="terminal-blue">
+                            <div><strong>🔵 Синяя</strong></div>
+                            <div class="terminal-output" id="output-blue"></div>
+                            <textarea id="input-blue" placeholder="Команда для синей..."></textarea>
+                            <button onclick="window.sendTerminalCommand('blue')">▶</button>
+                            <button onclick="window.clearTerminal('blue')">Очистить</button>
+                        </div>
+                        <div class="terminal-box" id="terminal-yellow">
+                            <div><strong>🟡 Жёлтая</strong></div>
+                            <div class="terminal-output" id="output-yellow"></div>
+                            <textarea id="input-yellow" placeholder="Команда для жёлтой..."></textarea>
+                            <button onclick="window.sendTerminalCommand('yellow')">▶</button>
+                            <button onclick="window.clearTerminal('yellow')">Очистить</button>
+                        </div>
+                        <div class="terminal-box" id="terminal-red">
+                            <div><strong>🔴 Красная</strong></div>
+                            <div class="terminal-output" id="output-red"></div>
+                            <textarea id="input-red" placeholder="Команда для красной..."></textarea>
+                            <button onclick="window.sendTerminalCommand('red')">▶</button>
+                            <button onclick="window.clearTerminal('red')">Очистить</button>
+                        </div>
+                        <div class="terminal-box" id="terminal-green">
+                            <div><strong>🟢 Зелёная</strong></div>
+                            <div class="terminal-output" id="output-green"></div>
+                            <textarea id="input-green" placeholder="Команда для зелёной..."></textarea>
+                            <button onclick="window.sendTerminalCommand('green')">▶</button>
+                            <button onclick="window.clearTerminal('green')">Очистить</button>
+                        </div>
+                    </div>
+                    <div class="robot-chat" id="robot-chat"></div>
+                    <div style="display: flex; margin-top:0.3rem;">
+                        <input type="text" id="robot-command" placeholder="Введите команду для всех роботов..." style="flex:1;">
+                        <button onclick="window.sendRobotCommand()">▶</button>
+                    </div>
+                </div>
+                <div class="side-panel" id="side-panel" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модальное окно 3D-принтера (старый) ===== -->
+    <div id="printerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="window.closePrinterSim()">&times;</span>
+            <h3>🖨️ 3D-принтер — Слайсер</h3>
+            <div class="control-row">
+                <select id="printer-select" style="width:200px;">
+                    <option value="ultimaker">Ultimaker 2+</option>
+                    <option value="flying_bear">Flying Bear Reborn 2</option>
+                    <option value="creality">Creality Ender 3</option>
+                    <option value="custom">Свой принтер (IP:port)</option>
+                </select>
+                <input type="text" id="printer-address" placeholder="IP: порт (например 192.168.1.100:5000)" style="width:200px; display:none;">
+                <button onclick="window.connectPrinter()">🔗 Подключить</button>
+                <button onclick="window.disconnectPrinter()">🔌 Отключить</button>
+                <button onclick="window.loadModelForPrint()">📂 Загрузить модель</button>
+                <input type="file" id="printer-file-input" accept=".stl,.glb,.gltf" style="display:none">
+                <button onclick="window.printerSliceModel()">🍰 Слайсинг</button>
+                <button onclick="window.startPrint()">▶ Начать печать</button>
+                <button onclick="window.pausePrint()">⏸ Пауза</button>
+                <button onclick="window.stopPrint()">⏹ Остановить</button>
+                <button onclick="window.clearBed()">🧹 Очистить стол</button>
+            </div>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                <div style="flex:3; min-width:400px;">
+                    <div id="printer-three-container" style="width:100%; height:500px; min-height:500px;"></div>
+                </div>
+                <div style="flex:1.5; display:flex; flex-direction:column; gap:0.5rem; min-width:200px;">
+                    <div style="background:#313244; border-radius:8px; padding:0.5rem;">
+                        <div><strong>Статус</strong></div>
+                        <div id="print-status">Статус: не подключено</div>
+                        <div id="print-progress">Прогресс: 0%</div>
+                        <div id="print-time">Время: 0:00</div>
+                        <div>Температура сопла: <span id="print-temp">0</span>°C</div>
+                        <div>Температура стола: <span id="print-bed-temp">0</span>°C</div>
+                    </div>
+                    <div style="background:#313244; border-radius:8px; padding:0.5rem;">
+                        <div><strong>Настройки слайсера</strong></div>
+                        <label>Высота слоя (мм): <input type="number" id="layer-height" value="0.2" step="0.01" style="width:60px;"></label><br>
+                        <label>Заполнение (%): <input type="number" id="infill" value="20" style="width:60px;"></label><br>
+                        <label>Скорость (мм/с): <input type="number" id="print-speed" value="60" style="width:60px;"></label><br>
+                        <label>Температура сопла: <input type="number" id="nozzle-temp" value="200" style="width:60px;"></label><br>
+                        <label>Температура стола: <input type="number" id="bed-temp" value="60" style="width:60px;"></label><br>
+                        <label><input type="checkbox" id="supports"> Поддержки</label>
+                    </div>
+                    <div style="background:#313244; border-radius:8px; padding:0.5rem; flex:1; overflow-y:auto;">
+                        <div><strong>Лог</strong></div>
+                        <div id="printer-log" style="height:150px; overflow-y:auto; border:1px solid #45475a; border-radius:4px; padding:0.3rem; background:#1e1e2e;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Модальное окно KLHSLICER (iframe) ===== -->
+    <div id="slicerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="window.closeSlicerModal()">&times;</span>
+            <iframe src="/slicer"></iframe>
+        </div>
+    </div>
+
+    <!-- ===== Модальное окно списка команд ===== -->
+    <div id="commandListModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="window.closeCommandList()">&times;</span>
+            <h3>📜 Список команд</h3>
+            <ul>
+                <li><b>сесть</b> – робот садится</li>
+                <li><b>встать</b> – робот встаёт</li>
+                <li><b>идти за лидером [число]</b> – робот следует за лидером указанное число шагов</li>
+                <li><b>штурм точки [номер]</b> – начать штурм точки с разведкой и оценкой сил</li>
+                <li><b>окружение точки [номер]</b> – окружить точку</li>
+                <li><b>окружение команды [цвет]</b> – окружить вражескую команду</li>
+                <li><b>захват</b> – после окружения начать захват</li>
+                <li><b>отступить</b> – отступить от окружения или штурма</li>
+                <li><b>подойти к лидеру</b> – команда подходит к лидеру</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ===== Подключение внешних библиотек ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/DragControls.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <script>
+        // ====================================================================
+        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // ====================================================================
+        const socket = io();
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('message');
+        const dualContent = document.getElementById('dual-content');
+        const robotChat = document.getElementById('robot-chat');
+
+        // ROS2
+        let scene, camera, renderer, controls, gltfLoader;
+        let robots = [];
+        let activeRobotId = null;
+        let gridHelper, dragControls, animationFrameId;
+        let selectedTeam = null;
+        let teams = { blue: [], yellow: [], red: [], green: [] };
+        let dragTargets = [];
+        let capturePointObjects = {};
+        let customPoints = [];
+        let scoutMarkers = {};
+        let currentProgrammingRobot = null;
+        let fpvActive = false;
+        let fpvCamera, fpvRenderer;
+        let canvasClickListener = null;
+
+        const threeContainer = document.getElementById('three-container');
+        const robotSelect = document.getElementById('robot-select');
+        const leaderSelect = document.getElementById('leader-select');
+        const currentTeamSpan = document.getElementById('current-team');
+        const locationSelect = document.getElementById('location-select');
+
+        let currentLocation = 'walk_training';
+        let locationObjects = [];
+
+        // Принтер (старый)
+        let printerScene, printerCamera, printerRenderer, printerControls;
+        let printerModel = null;
+        let printerBed = null;
+        let printerAnimationId = null;
+        let connectedPrinter = false;
+        let lastGeneratedModel = null;
+        let printerLog = [];
+
+        // ===== Переменные для генератора 3D =====
+        let viewerScene, viewerCamera, viewerRenderer, viewerControls;
+        let viewerModel = null;
+        let lastGeneratedFilename = null;
+        let viewerInitialized = false;
+
+        // ===== Переменные для физики =====
+        let physicsRunning = false;
+        let physicsMesh = null;
+
+        // ====================================================================
+        // ВЫБОР ЯЗЫКА
+        // ====================================================================
+        const langSelect = document.getElementById('language-select');
+        if (langSelect) {
+            const savedLang = localStorage.getItem('urfin_language') || 'ru';
+            langSelect.value = savedLang;
+            fetch('/set_language', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ language: savedLang })
+            }).catch(err => console.error('Ошибка установки языка:', err));
+
+            langSelect.addEventListener('change', function() {
+                const lang = this.value;
+                localStorage.setItem('urfin_language', lang);
+                fetch('/set_language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ language: lang })
+                }).then(() => {
+                    window.addMessage(`🌐 Язык изменён на ${langSelect.options[langSelect.selectedIndex].text}`, 'system');
+                }).catch(err => console.error('Ошибка смены языка:', err));
+            });
+        }
+
+        // ====================================================================
+        // УПРАВЛЕНИЕ СПИСКОМ ЧАТОВ (ОБНОВЛЁННАЯ ФУНКЦИЯ)
+        // ====================================================================
+        function loadChatList() {
+            fetch('/api/sessions')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('chat-list');
+                    list.innerHTML = '';
+                    if (data.sessions && data.sessions.length) {
+                        data.sessions.forEach(s => {
+                            const div = document.createElement('div');
+                            div.className = 'chat-item';
+                            div.style.display = 'flex';
+                            div.style.justifyContent = 'space-between';
+                            div.style.alignItems = 'center';
+                            div.style.padding = '4px 8px';
+                            div.style.borderBottom = '1px solid #45475a';
+
+                            const span = document.createElement('span');
+                            span.textContent = s.name || s.session_id.slice(0, 8);
+                            span.style.cursor = 'pointer';
+                            span.style.flex = '1';
+                            span.onclick = () => {
+                                fetch('/api/load_session', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({session_id: s.session_id})
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.status === 'ok') {
+                                        window.addMessage(`Загружен чат: ${data.name}`, 'system');
+                                        chat.innerHTML = '';
+                                        loadChatList();
+                                    } else {
+                                        window.addMessage(`Ошибка загрузки чата: ${data.message || data.error}`, 'system');
+                                    }
+                                })
+                                .catch(err => console.error('Ошибка загрузки чата:', err));
+                            };
+                            div.appendChild(span);
+
+                            const delBtn = document.createElement('button');
+                            delBtn.textContent = '✕';
+                            delBtn.style.background = 'transparent';
+                            delBtn.style.border = 'none';
+                            delBtn.style.color = '#f38ba8';
+                            delBtn.style.cursor = 'pointer';
+                            delBtn.style.fontSize = '14px';
+                            delBtn.style.padding = '0 4px';
+                            delBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                if (confirm(`Удалить чат "${s.name || s.session_id.slice(0,8)}"?`)) {
+                                    fetch('/api/delete_session', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({session_id: s.session_id})
+                                    })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.status === 'ok') {
+                                            loadChatList();
+                                            if (chat.children.length > 0) {
+                                                chat.innerHTML = '';
+                                                window.addMessage('Чат удалён', 'system');
+                                            }
+                                        } else {
+                                            window.addMessage(`Ошибка удаления: ${data.message || data.error}`, 'system');
+                                        }
+                                    })
+                                    .catch(err => console.error('Ошибка удаления чата:', err));
+                                }
+                            };
+                            div.appendChild(delBtn);
+                            list.appendChild(div);
+                        });
+                    } else {
+                        list.innerHTML = '<div style="color: #888;">Нет чатов</div>';
+                    }
+                })
+                .catch(err => console.error('Ошибка загрузки чатов:', err));
+        }
+
+        function createNewChat() {
+            fetch('/api/sessions')
+                .then(res => res.json())
+                .then(data => {
+                    const count = (data.sessions ? data.sessions.length : 0) + 1;
+                    const name = `Чат ${count}`;
+                    fetch('/api/new_session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.session_id) {
+                            window.addMessage(`Создан новый чат: ${data.name}`, 'system');
+                            loadChatList();
+                            chat.innerHTML = '';
+                        } else {
+                            window.addMessage(`Ошибка создания чата: ${data.error}`, 'system');
+                        }
+                    })
+                    .catch(err => console.error('Ошибка создания чата:', err));
+                })
+                .catch(err => console.error('Ошибка получения списка сессий:', err));
+        }
+
+        document.addEventListener('DOMContentLoaded', loadChatList);
+
+        // ====================================================================
+        // ОСНОВНОЙ ЧАТ
+        // ====================================================================
+        window.addMessage = function(text, sender) {
+            const div = document.createElement('div');
+            div.classList.add('msg', sender || 'system');
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        };
+
+        window.sendMessage = function() {
+            const text = input.value.trim();
+            if (!text) return;
+            window.addMessage(text, 'user');
+            socket.emit('user_message', { text: text });
+            input.value = '';
+        };
+
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') window.sendMessage(); });
+
+        // ====================================================================
+        // SOCKET ОБРАБОТЧИКИ
+        // ====================================================================
+        socket.on('assistant_message', (data) => {
+            window.addMessage(data.text, 'assistant');
+        });
+
+        socket.on('dual_opinions', (data) => {
+            dualContent.innerHTML = '';
+            const div = document.createElement('div');
+            div.textContent = data.text;
+            dualContent.appendChild(div);
+        });
+
+        socket.on('generation_result', (data) => {
+            const filename = data.filename;
+            lastGeneratedModel = filename;
+            lastGeneratedFilename = filename;
+            document.getElementById('physics-gen-btn').disabled = false;
+            if (typeof loadModelIntoViewer === 'function') {
+                loadModelIntoViewer(filename);
+            } else {
+                console.log('Модель создана:', filename);
+            }
+            window.addMessage(`✅ Модель "${filename}" создана!`, 'assistant');
+        });
+
+        socket.on('model_generated', function(data) {
+            const stlBase64 = data.stl_base64;
+            const prompt = data.prompt;
+            const shapeInfo = data.shape_info;
+            const solutions = data.solutions;
+            const params = data.params;
+
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('generation-status').textContent = '✅ Модель создана!';
+            document.getElementById('physics-gen-btn').disabled = false;
+
+            if (stlBase64) {
+                loadModelFromBase64(stlBase64);
+                lastGeneratedFilename = 'model_' + Date.now() + '.stl';
+                lastGeneratedModel = lastGeneratedFilename;
+                window._lastStlBase64 = stlBase64;
+                window.addMessage(`✅ Модель "${prompt}" создана через PicoGK!`, 'assistant');
+            } else {
+                document.getElementById('generation-status').textContent = '❌ Нет данных STL в ответе.';
+            }
+
+            console.log('Shape info:', shapeInfo);
+            console.log('TRIZ solutions:', solutions);
+            console.log('Parameters:', params);
+        });
+
+        socket.on('model_error', function(data) {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('generation-status').textContent = '❌ Ошибка: ' + data.error;
+        });
+
+        // ====================================================================
+        // ФИЗИЧЕСКАЯ СИМУЛЯЦИЯ
+        // ====================================================================
+        function startPhysics() {
+            const filename = lastGeneratedFilename || lastGeneratedModel;
+            if (!filename) {
+                window.addMessage('❌ Сначала создайте модель.', 'system');
+                return;
+            }
+            if (physicsRunning) {
+                window.addMessage('⚠️ Физическая симуляция уже запущена.', 'system');
+                return;
+            }
+            window.addMessage('🔬 Запуск физической симуляции...', 'system');
+            socket.emit('physics_simulate', { filename: filename });
+        }
+
+        function startPhysicsFromGenerator() {
+            startPhysics();
+        }
+
+        socket.on('physics_started', (data) => {
+            physicsRunning = true;
+            window.addMessage('✅ Физическая симуляция запущена.', 'system');
+        });
+
+        socket.on('physics_update', (data) => {
+            if (!physicsMesh) {
+                const loader = new THREE.STLLoader();
+                const filename = lastGeneratedFilename || lastGeneratedModel;
+                if (filename) {
+                    loader.load('/model/' + filename, (geometry) => {
+                        const material = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3, metalness: 0.1 });
+                        physicsMesh = new THREE.Mesh(geometry, material);
+                        physicsMesh.scale.set(0.1, 0.1, 0.1);
+                        scene.add(physicsMesh);
+                        if (data.position) {
+                            physicsMesh.position.set(data.position.x, data.position.y, data.position.z);
+                        }
+                    });
+                }
+            } else {
+                if (data.position) {
+                    physicsMesh.position.set(data.position.x, data.position.y, data.position.z);
+                }
+            }
+        });
+
+        socket.on('physics_error', (data) => {
+            physicsRunning = false;
+            window.addMessage('❌ Ошибка физики: ' + data.error, 'system');
+        });
+
+        // ====================================================================
+        // УМНАЯ ПОДГОНКА КАМЕРЫ ПОД РАЗМЕР МОДЕЛИ
+        // ====================================================================
+        function fitCameraToModel(object, padding = 1.6) {
+            if (!object || !viewerCamera || !viewerControls) return;
+
+            // 1. Bounding box модели
+            const box = new THREE.Box3().setFromObject(object);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+
+            // 2. Максимальный размер
+            const maxSize = Math.max(size.x, size.y, size.z);
+            if (maxSize <= 0) return;
+
+            // 3. Расстояние по вертикали (FOV)
+            const fovRad = (viewerCamera.fov * Math.PI) / 180;
+            const fitHeightDistance = maxSize / (2 * Math.tan(fovRad / 2));
+
+            // 4. Расстояние по горизонтали (aspect ratio)
+            const fitWidthDistance = fitHeightDistance / viewerCamera.aspect;
+
+            // 5. Итоговое расстояние + padding
+            const distance = padding * Math.max(fitHeightDistance, fitWidthDistance);
+
+            // 6. Направление (стандартный ракурс)
+            const direction = new THREE.Vector3(0.7, 0.5, 0.9).normalize();
+
+            // 7. Ставим камеру
+            viewerCamera.position.copy(center).add(direction.multiplyScalar(distance));
+
+            // 8. Настраиваем near/far, чтобы модель не обрезалась
+            viewerCamera.near = Math.max(0.01, distance / 100);
+            viewerCamera.far = distance * 100;
+            viewerCamera.updateProjectionMatrix();
+
+            // 9. Центрируем контролы
+            viewerControls.target.copy(center);
+            viewerControls.minDistance = distance * 0.2;
+            viewerControls.maxDistance = distance * 5;
+            viewerControls.update();
+        }
+
+        // ====================================================================
+        // ГЕНЕРАТОР 3D (PicoGK) — LLM генерирует код через worker
+        // ====================================================================
+        function initViewer() {
+            const container = document.getElementById('viewer-container');
+            if (!container) return;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            if (width === 0 || height === 0) return;
+            if (viewerInitialized) return;
+
+            viewerScene = new THREE.Scene();
+            viewerScene.background = new THREE.Color(0x12121e);
+
+            viewerCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 10000);
+            viewerCamera.position.set(5, 4, 8);
+            viewerCamera.lookAt(0, 0, 0);
+
+            viewerRenderer = new THREE.WebGLRenderer({ antialias: true });
+            viewerRenderer.setSize(width, height);
+            viewerRenderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(viewerRenderer.domElement);
+
+            viewerControls = new THREE.OrbitControls(viewerCamera, viewerRenderer.domElement);
+            viewerControls.enableDamping = true;
+            viewerControls.dampingFactor = 0.1;
+            viewerControls.target.set(0, 0, 0);
+            viewerControls.update();
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            viewerScene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            viewerScene.add(dirLight);
+
+            const grid = new THREE.GridHelper(10, 10, 0x3a3a4e, 0x2a2a3e);
+            viewerScene.add(grid);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (viewerControls) viewerControls.update();
+                updateCadPhysics();               // ← ДОБАВЛЕНО
+                if (viewerRenderer && viewerScene && viewerCamera) {
+                    viewerRenderer.render(viewerScene, viewerCamera);
+                }
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                if (w === 0 || h === 0) return;
+                if (viewerCamera) {
+                    viewerCamera.aspect = w / h;
+                    viewerCamera.updateProjectionMatrix();
+                }
+                if (viewerRenderer) viewerRenderer.setSize(w, h);
+            });
+
+            viewerInitialized = true;
+        }
+
+        function loadModelFromBase64(base64Data) {
+            const container = document.getElementById('viewer-container');
+            if (!container || !viewerScene) return;
+            if (viewerModel) {
+                viewerScene.remove(viewerModel);
+                if (viewerModel.geometry) viewerModel.geometry.dispose();
+                if (viewerModel.material) {
+                    if (Array.isArray(viewerModel.material)) viewerModel.material.forEach(m => m.dispose());
+                    else viewerModel.material.dispose();
+                }
+                viewerModel = null;
+            }
+
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+
+            const loader = new THREE.STLLoader();
+            loader.load(url, (geometry) => {
+                const material = new THREE.MeshStandardMaterial({ color: 0x89b4fa, roughness: 0.3, metalness: 0.1 });
+                const mesh = new THREE.Mesh(geometry, material);
+
+                // Центрируем модель в начале координат
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                mesh.position.sub(center);
+                // Слегка поднимаем, чтобы модель была чуть выше сетки
+                mesh.position.y += 0.5;
+
+                viewerScene.add(mesh);
+                viewerModel = mesh;
+
+                // === АВТОПОДГОНКА КАМЕРЫ ===
+                fitCameraToModel(mesh, 1.8);
+
+                URL.revokeObjectURL(url);
+            }, undefined, (error) => {
+                console.error('Ошибка загрузки STL из base64:', error);
+                document.getElementById('generation-status').textContent = '❌ Ошибка загрузки модели.';
+            });
+        }
+
+        function loadModelIntoViewer(filename) {
+            const container = document.getElementById('viewer-container');
+            if (!container) return;
+            if (viewerModel) {
+                viewerScene.remove(viewerModel);
+                if (viewerModel.geometry) viewerModel.geometry.dispose();
+                if (viewerModel.material) {
+                    if (Array.isArray(viewerModel.material)) viewerModel.material.forEach(m => m.dispose());
+                    else viewerModel.material.dispose();
+                }
+                viewerModel = null;
+            }
+            const loader = new THREE.STLLoader();
+            loader.load('/model/' + filename, (geometry) => {
+                const material = new THREE.MeshStandardMaterial({ color: 0x89b4fa, roughness: 0.3, metalness: 0.1 });
+                const mesh = new THREE.Mesh(geometry, material);
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                mesh.position.sub(center);
+                mesh.position.y += 0.5;
+                viewerScene.add(mesh);
+                viewerModel = mesh;
+
+                // === АВТОПОДГОНКА КАМЕРЫ ===
+                fitCameraToModel(mesh, 1.8);
+
+                const overlay = document.getElementById('loadingOverlay');
+                overlay.classList.add('hidden');
+                document.getElementById('physics-gen-btn').disabled = false;
+            }, undefined, (error) => {
+                console.error('Ошибка загрузки STL:', error);
+                document.getElementById('generation-status').textContent = '❌ Ошибка загрузки модели.';
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            });
+        }
+
+        function openGenerator() {
+            const modal = document.getElementById('generatorModal');
+            modal.style.display = 'flex';
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            document.getElementById('generation-status').textContent = '';
+            if (!viewerInitialized) {
+                setTimeout(initViewer, 100);
+            }
+            document.getElementById('promptInput').value = '';
+            lastGeneratedFilename = null;
+            document.getElementById('physics-gen-btn').disabled = true;
+        }
+
+        function closeGenerator() {
+            document.getElementById('generatorModal').style.display = 'none';
+            if (viewerRenderer) {
+                viewerRenderer.dispose();
+                if (viewerRenderer.domElement) viewerRenderer.domElement.remove();
+                viewerScene = null;
+                viewerCamera = null;
+                viewerRenderer = null;
+                viewerControls = null;
+                viewerInitialized = false;
+            }
+        }
+
+        function generateModel() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                document.getElementById('generation-status').textContent = '⚠️ Введите описание модели.';
+                return;
+            }
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            document.getElementById('generation-status').textContent = '⏳ Генерация...';
+
+            socket.emit('generate_model', { prompt: prompt });
+        }
+
+        function downloadModel() {
+            if (window._lastStlBase64) {
+                const link = document.createElement('a');
+                link.href = 'data:application/octet-stream;base64,' + window._lastStlBase64;
+                link.download = lastGeneratedFilename || 'model.stl';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else if (lastGeneratedFilename) {
+                window.open('/model/' + lastGeneratedFilename, '_blank');
+            } else {
+                alert('Сначала создайте модель.');
+            }
+        }
+
+        function sendToSlicer() {
+            if (lastGeneratedFilename) {
+                window.sliceModelForChat(lastGeneratedFilename);
+            } else {
+                alert('Сначала создайте модель.');
+            }
+        }
+
+        // ==========================================================================
+        // ГЕНЕРАЦИЯ CAD (с двуполушаркой + TRIZ + вариантами)
+        // ==========================================================================
+        let cadVariants = [];
+        let cadBestIndex = 0;
+        let cadCurrentIndex = 0;
+        let cadExploded = false;
+        let cadExplodedParts = [];
+        let cadPhysicsRunning = false;
+        let cadPhysicsMesh = null;
+
+        function generateModelAdvanced() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                document.getElementById('generation-status').textContent = '⚠️ Введите описание';
+                return;
+            }
+            const numVariants = parseInt(document.getElementById('num-variants').value) || 3;
+
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('generation-status').textContent = '⏳ Запуск анализа...';
+            document.getElementById('cad-progress').style.display = 'block';
+            document.getElementById('cad-progress-text').textContent = 'Левое полушарие анализирует...';
+            document.getElementById('variants-panel').style.display = 'none';
+            document.getElementById('variants-list').innerHTML = '';
+            document.getElementById('explode-btn').disabled = true;
+            document.getElementById('physics-gen-btn').disabled = true;
+            document.getElementById('restore-btn').style.display = 'none';
+            cadExploded = false;
+            cadVariants = [];
+
+            socket.emit('generate_model_advanced', { prompt, num_variants: numVariants });
+        }
+
+        socket.on('cad_progress', (data) => {
+            document.getElementById('cad-progress-text').textContent = data.text || '';
+        });
+
+        socket.on('model_generated_advanced', (data) => {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('cad-progress').style.display = 'none';
+            document.getElementById('generation-status').textContent =
+                `✅ ${data.variants.length} вариантов. Лучший — #${data.best_index + 1}`;
+            document.getElementById('explode-btn').disabled = false;
+            document.getElementById('physics-gen-btn').disabled = false;
+
+            cadVariants = data.variants || [];
+            cadBestIndex = data.best_index || 0;
+            cadCurrentIndex = cadBestIndex;
+
+            // Панель вариантов
+            const list = document.getElementById('variants-list');
+            list.innerHTML = '';
+            cadVariants.forEach((v, i) => {
+                const div = document.createElement('div');
+                const isBest = i === cadBestIndex;
+                div.style.cssText = `padding:6px 8px; border-radius:6px; cursor:pointer; font-size:11px;
+                    background:${i === cadCurrentIndex ? 'rgba(137,180,250,0.3)' : 'rgba(30,40,70,0.5)'};
+                    border:1px solid ${isBest ? 'rgba(166,227,161,0.7)' : 'rgba(100,180,255,0.2)'};
+                    color:#cdd6f4;`;
+                div.innerHTML = `
+                    <b>#${i + 1}${isBest ? ' ⭐' : ''}</b> — ${v.description || 'вариант'}<br>
+                    <span style="color:#6c7086; font-size:10px;">
+                        ${v.shape_type || ''} ${JSON.stringify(v.params || {}).slice(0, 60)}
+                        ${v.error ? '<br>❌ ' + v.error : ''}
+                    </span>
+                `;
+                div.onclick = () => selectVariant(i);
+                list.appendChild(div);
+            });
+            document.getElementById('variants-panel').style.display = 'block';
+
+            // Метаданные
+            const md = document.getElementById('cad-metadata');
+            md.innerHTML = `
+                <b>Анализ:</b> ${data.analysis?.shape_type || '—'}<br>
+                <b>Назначение:</b> ${data.analysis?.purpose || '—'}<br>
+                <b>TRIZ:</b> ${(data.triz?.suggestions || []).length} решений
+            `;
+
+            // Загружаем лучший вариант
+            loadVariantIntoViewer(cadBestIndex);
+        });
+
+        socket.on('model_error', (data) => {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('cad-progress').style.display = 'none';
+            document.getElementById('generation-status').textContent = '❌ ' + (data.error || 'Неизвестная ошибка');
+
+            // Очищаем старую модель, чтобы не путала
+            if (viewerModel && viewerScene) {
+                viewerScene.remove(viewerModel);
+                if (viewerModel.geometry) viewerModel.geometry.dispose();
+                if (viewerModel.material) {
+                    if (Array.isArray(viewerModel.material)) viewerModel.material.forEach(m => m.dispose());
+                    else viewerModel.material.dispose();
+                }
+                viewerModel = null;
+            }
+            // Также сбрасываем панель вариантов
+            document.getElementById('variants-panel').style.display = 'none';
+            document.getElementById('variants-list').innerHTML = '';
+        });
+
+        function selectVariant(index) {
+            if (index < 0 || index >= cadVariants.length) return;
+            cadCurrentIndex = index;
+            // Перекрашиваем список
+            const list = document.getElementById('variants-list');
+            [...list.children].forEach((el, i) => {
+                el.style.background = i === index ? 'rgba(137,180,250,0.3)' : 'rgba(30,40,70,0.5)';
+            });
+            loadVariantIntoViewer(index);
+        }
+
+        function loadVariantIntoViewer(index) {
+            const v = cadVariants[index];
+            if (!v) return;
+            if (v.error) {
+                document.getElementById('generation-status').textContent = '❌ ' + v.error;
+                return;
+            }
+            if (v.stl_base64) {
+                loadModelFromBase64(v.stl_base64);
+            }
+            document.getElementById('restore-btn').style.display = 'none';
+            cadExploded = false;
+        }
+
+        function downloadCurrentVariant() {
+            const v = cadVariants[cadCurrentIndex];
+            if (!v || !v.stl_base64) { alert('Нет модели'); return; }
+            const link = document.createElement('a');
+            link.href = 'data:application/octet-stream;base64,' + v.stl_base64;
+            link.download = `urfin_model_${Date.now()}.stl`;
+            link.click();
+        }
+
+        function fitCurrentModel() {
+            if (!viewerModel) {
+                document.getElementById('generation-status').textContent = '⚠️ Модель ещё не загружена';
+                return;
+            }
+            fitCameraToModel(viewerModel, 1.8);
+            document.getElementById('generation-status').textContent = '🔍 Вид подогнан';
+        }
+
+        // ====================================================================
+        // ROS2 – 3D СИМУЛЯЦИЯ
+        // ====================================================================
+        window.openROS2 = function() {
+            document.getElementById('ros2Modal').style.display = 'flex';
+            setTimeout(() => initThree(), 200);
+            robotChat.innerHTML = '';
+            const sysDiv = document.createElement('div');
+            sysDiv.textContent = 'Добавьте робота и управляйте им.';
+            robotChat.appendChild(sysDiv);
+            teams = { blue: [], yellow: [], red: [], green: [] };
+            selectedTeam = null;
+            currentTeamSpan.textContent = 'нет';
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+            leaderSelect.innerHTML = '';
+            document.getElementById('side-panel').style.display = 'none';
+            fpvActive = false;
+            currentProgrammingRobot = null;
+            document.querySelectorAll('.terminal-box').forEach(box => box.classList.remove('active'));
+            updateActiveRobotInfo();
+        };
+
+        window.closeROS2 = function() {
+            document.getElementById('ros2Modal').style.display = 'none';
+            destroyThree();
+            document.getElementById('side-panel').style.display = 'none';
+            fpvActive = false;
+            currentProgrammingRobot = null;
+        };
+
+        function initThree() {
+            if (scene) return;
+            if (!threeContainer || threeContainer.clientWidth === 0) {
+                setTimeout(initThree, 300);
+                return;
+            }
+            const width = threeContainer.clientWidth;
+            const height = threeContainer.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x88aaff);
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+            camera.position.set(15, 15, 25);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            threeContainer.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.target.set(0, 0, 0);
+            controls.maxPolarAngle = Math.PI / 2.2;
+
+            const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(20, 30, 10);
+            dirLight.castShadow = true;
+            dirLight.receiveShadow = true;
+            scene.add(dirLight);
+
+            gltfLoader = new THREE.GLTFLoader();
+            window.changeGridSize(parseInt(document.getElementById('grid-size').value));
+            window.changeLocation();
+
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            canvasClickListener = function(event) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const meshes = [];
+                robots.forEach(r => r.mesh.traverse(c => { if (c.isMesh) meshes.push(c); }));
+                const intersects = raycaster.intersectObjects(meshes);
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj && !robots.some(r => r.mesh === obj)) obj = obj.parent;
+                    if (obj) {
+                        const robot = robots.find(r => r.mesh === obj);
+                        if (robot) {
+                            activeRobotId = robot.id;
+                            robotSelect.value = robot.id;
+                            robots.forEach(r => r.mesh.traverse(c => { if (c.isMesh) c.material.emissive?.setHex(0x000000); }));
+                            robot.mesh.traverse(c => { if (c.isMesh) c.material.emissive?.setHex(0x222222); });
+                            openProgrammingPanel(robot);
+                            updateActiveRobotInfo();
+                        }
+                    }
+                }
+            };
+            renderer.domElement.addEventListener('click', canvasClickListener);
+
+            renderer.domElement.addEventListener('dblclick', (event) => {
+                if (currentLocation !== 'capture_points') return;
+                const rect = renderer.domElement.getBoundingClientRect();
+                const mouse = new THREE.Vector2();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                const ray = new THREE.Raycaster();
+                ray.setFromCamera(mouse, camera);
+                const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                const intersection = new THREE.Vector3();
+                if (ray.ray.intersectPlane(groundPlane, intersection)) {
+                    socket.emit('add_point', { x: intersection.x, z: intersection.z });
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('ros2Modal').style.display !== 'flex') return;
+                if (!activeRobotId) return;
+                let command = null;
+                switch(e.key) {
+                    case 'w': case 'W': command = 'move_forward'; break;
+                    case 's': case 'S': command = 'move_backward'; break;
+                    case 'a': case 'A': command = 'turn_left'; break;
+                    case 'd': case 'D': command = 'turn_right'; break;
+                    case ' ': command = 'stop'; e.preventDefault(); break;
+                }
+                if (command) {
+                    e.preventDefault();
+                    window.sendRobotCommandStr(command);
+                }
+            });
+
+            function animate() {
+                animationFrameId = requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            window.addEventListener('resize', onResize);
+        }
+
+        function onResize() {
+            if (!camera || !renderer) return;
+            const width = threeContainer.clientWidth;
+            const height = threeContainer.clientHeight;
+            if (width === 0 || height === 0) return;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function destroyThree() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (renderer) {
+                if (canvasClickListener) {
+                    renderer.domElement.removeEventListener('click', canvasClickListener);
+                    canvasClickListener = null;
+                }
+                renderer.dispose();
+                threeContainer.innerHTML = '';
+            }
+            robots.forEach(r => {
+                if (r.timeouts) {
+                    r.timeouts.forEach(t => clearTimeout(t));
+                    r.timeouts = [];
+                }
+                disposeRobot(r.mesh);
+            });
+            robots = [];
+            activeRobotId = null;
+            robotSelect.innerHTML = '';
+            leaderSelect.innerHTML = '';
+            teams = { blue: [], yellow: [], red: [], green: [] };
+            selectedTeam = null;
+            currentTeamSpan.textContent = 'нет';
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+            locationObjects.forEach(obj => scene?.remove(obj));
+            locationObjects = [];
+            for (let key in capturePointObjects) { scene?.remove(capturePointObjects[key].group); }
+            capturePointObjects = {};
+            customPoints = [];
+            for (let key in scoutMarkers) { scene?.remove(scoutMarkers[key]); }
+            scoutMarkers = {};
+            window.removeEventListener('resize', onResize);
+            scene = null; camera = null; renderer = null; controls = null; gltfLoader = null; gridHelper = null; dragControls = null;
+            fpvCamera = null; fpvRenderer = null;
+            updateActiveRobotInfo();
+        }
+
+        function disposeRobot(obj) {
+            if (!obj) return;
+            obj.traverse((child) => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => disposeMaterial(m));
+                    else disposeMaterial(child.material);
+                }
+            });
+            if (obj.parent) obj.parent.remove(obj);
+        }
+
+        function disposeMaterial(mat) {
+            if (!mat) return;
+            for (const key of Object.keys(mat)) if (mat[key] && mat[key].isTexture) mat[key].dispose();
+            mat.dispose();
+        }
+
+        function updateActiveRobotInfo() {
+            const info = document.getElementById('active-robot-info');
+            const healthSpan = document.getElementById('robot-health');
+            const batterySpan = document.getElementById('robot-battery');
+            if (activeRobotId) {
+                const robot = robots.find(r => r.id === activeRobotId);
+                if (robot) {
+                    info.textContent = `Активный: ${robot.type} (${robot.id.slice(-4)})`;
+                    healthSpan.textContent = `❤️ ${robot.health || 100}%`;
+                    const battery = robot.battery || 100;
+                    batterySpan.textContent = `🔋 ${battery}%`;
+                    return;
+                }
+            }
+            info.textContent = 'Активный: нет';
+            healthSpan.textContent = '❤️ 100%';
+            batterySpan.textContent = '🔋 100%';
+        }
+
+        window.changeGridSize = function(size) {
+            if (!scene) return;
+            if (gridHelper) scene.remove(gridHelper);
+            gridHelper = new THREE.GridHelper(size, size, 0x888888, 0x444444);
+            scene.add(gridHelper);
+        };
+
+        window.changeLocation = function() {
+            currentLocation = locationSelect.value;
+            locationObjects.forEach(obj => scene.remove(obj));
+            locationObjects = [];
+            for (let key in capturePointObjects) { scene.remove(capturePointObjects[key].group); }
+            capturePointObjects = {};
+            customPoints = [];
+            if (currentLocation === 'obstacle_course') {
+                for (let i = 0; i < 20; i++) {
+                    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+                    const boxMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+                    const box = new THREE.Mesh(boxGeo, boxMat);
+                    box.position.set((Math.random() - 0.5) * 40, 0.5, (Math.random() - 0.5) * 40);
+                    box.castShadow = true; box.receiveShadow = true;
+                    scene.add(box);
+                    locationObjects.push(box);
+                }
+            }
+        };
+
+        function createCapturePoint(pointId, x, z) {
+            const group = new THREE.Group();
+            const ringGeo = new THREE.TorusGeometry(5.5, 0.2, 16, 32);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 0.1;
+            group.add(ring);
+            const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 4, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.y = 2;
+            group.add(pole);
+            const flagGeo = new THREE.PlaneGeometry(1.2, 0.8);
+            const flagMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const flag = new THREE.Mesh(flagGeo, flagMat);
+            flag.position.set(0, 3.8, 0);
+            group.add(flag);
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pointId.toString(), 32, 32);
+            const labelTex = new THREE.CanvasTexture(canvas);
+            const labelMat = new THREE.SpriteMaterial({ map: labelTex });
+            const label = new THREE.Sprite(labelMat);
+            label.scale.set(2, 2, 1);
+            label.position.set(0, 4.5, 0);
+            group.add(label);
+            group.position.set(x, 0, z);
+            scene.add(group);
+            capturePointObjects[pointId] = { group, flag, ring, flagMat, ringMat };
+        }
+
+        function updateCapturePoint(pointId, team) {
+            const obj = capturePointObjects[pointId];
+            if (!obj) return;
+            const color = team ? getTeamColor(team) : 0xffffff;
+            obj.flagMat.color.set(color);
+            obj.ringMat.color.set(color);
+        }
+
+        socket.on('point_added', (data) => { createCapturePoint(data.point_id, data.x, data.z); customPoints.push(data.point_id); });
+        socket.on('point_removed', (data) => {
+            if (capturePointObjects[data.point_id]) {
+                scene.remove(capturePointObjects[data.point_id].group);
+                delete capturePointObjects[data.point_id];
+            }
+            customPoints = customPoints.filter(id => id !== data.point_id);
+        });
+        socket.on('point_captured', (data) => { updateCapturePoint(data.point_id, data.team); });
+
+        window.addCustomPoint = function() {
+            if (!controls) return;
+            const center = controls.target.clone();
+            socket.emit('add_point', { x: center.x, z: center.z });
+        };
+        window.removeCustomPoint = function() {
+            if (customPoints.length > 0) {
+                const lastId = customPoints.pop();
+                socket.emit('remove_point', { point_id: lastId });
+            }
+        };
+        window.clearCustomPoints = function() {
+            customPoints.forEach(id => socket.emit('remove_point', { point_id: id }));
+            customPoints = [];
+        };
+
+        window.selectTeam = function(color) {
+            selectedTeam = color;
+            currentTeamSpan.textContent = color;
+            document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.team-btn.${color}`).classList.add('active');
+            document.querySelectorAll('.terminal-box').forEach(box => box.classList.remove('active'));
+            const terminal = document.getElementById('terminal-' + color);
+            if (terminal) terminal.classList.add('active');
+            updateLeaderSelect();
+        };
+
+        function getTeamColor(team) {
+            switch(team) {
+                case 'blue': return new THREE.Color(0x89b4fa);
+                case 'yellow': return new THREE.Color(0xf9e2af);
+                case 'red': return new THREE.Color(0xf38ba8);
+                case 'green': return new THREE.Color(0xa6e3a1);
+                default: return new THREE.Color(0xffffff);
+            }
+        }
+
+        function updateLeaderSelect() {
+            leaderSelect.innerHTML = '';
+            if (!selectedTeam) return;
+            const teamRobots = teams[selectedTeam];
+            teamRobots.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.type + ' ' + r.id.slice(-4) + (r.isLeader ? ' (лидер)' : '');
+                leaderSelect.appendChild(opt);
+            });
+        }
+
+        window.assignToTeam = function() {
+            if (!selectedTeam || !activeRobotId) return;
+            const robot = robots.find(r => r.id === activeRobotId);
+            if (!robot) return;
+            if (robot.team) {
+                const oldTeam = teams[robot.team];
+                const idx = oldTeam.indexOf(robot);
+                if (idx !== -1) oldTeam.splice(idx, 1);
+            }
+            robot.team = selectedTeam;
+            teams[selectedTeam].push(robot);
+            robot.mesh.traverse(child => { if (child.isMesh) child.material.color.set(getTeamColor(selectedTeam)); });
+            if (robot.crown) { scene.remove(robot.crown); robot.crown = null; robot.isLeader = false; }
+            socket.emit('assign_team', { robot_id: robot.id, team: selectedTeam });
+            updateLeaderSelect();
+            updateActiveRobotInfo();
+        };
+
+        window.setLeader = function() {
+            if (!selectedTeam) return;
+            const leaderId = leaderSelect.value;
+            if (!leaderId) return;
+            const teamRobots = teams[selectedTeam];
+            teamRobots.forEach(r => { r.isLeader = false; if (r.crown) { scene.remove(r.crown); r.crown = null; } });
+            const newLeader = teamRobots.find(r => r.id === leaderId);
+            if (newLeader) {
+                newLeader.isLeader = true;
+                const crownGeo = new THREE.ConeGeometry(0.5, 0.8, 8);
+                const crownMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.5 });
+                const crown = new THREE.Mesh(crownGeo, crownMat);
+                crown.position.set(0, 2.8, 0);
+                newLeader.mesh.add(crown);
+                newLeader.crown = crown;
+                socket.emit('set_leader', { team: selectedTeam, robot_id: leaderId });
+            }
+            updateLeaderSelect();
+            updateActiveRobotInfo();
+        };
+
+        window.createRobot = function() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x4a6fa5, roughness: 0.6, metalness: 0.4 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat);
+            body.castShadow = true; body.receiveShadow = true;
+            body.position.y = 0.25;
+            group.add(body);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x89b4fa });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), headMat);
+            head.position.set(0.35, 0.45, 0);
+            head.castShadow = true;
+            group.add(head);
+            const antMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 6), antMat);
+            ant.position.set(0.35, 0.65, 0);
+            group.add(ant);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const wheelPos = [[-0.2, -0.2, 0.3], [0.2, -0.2, 0.3], [-0.2, -0.2, -0.3], [0.2, -0.2, -0.3]];
+            wheelPos.forEach(pos => {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 8), wheelMat);
+                wheel.rotation.x = Math.PI / 2;
+                wheel.position.set(pos[0], pos[1], pos[2]);
+                group.add(wheel);
+            });
+            return group;
+        };
+
+        window.createDrone = function() {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a6fa5, roughness: 0.4, metalness: 0.6 });
+            const core = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), bodyMat);
+            core.castShadow = true; core.receiveShadow = true;
+            core.position.y = 0.1;
+            group.add(core);
+            const armMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            for (let i = 0; i < 4; i++) {
+                const angle = i * Math.PI / 2;
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.04), armMat);
+                arm.position.set(0.35 * Math.cos(angle), 0.1, 0.35 * Math.sin(angle));
+                arm.rotation.y = angle;
+                group.add(arm);
+                const motorMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+                const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), motorMat);
+                motor.position.set(0.7 * Math.cos(angle), 0.15, 0.7 * Math.sin(angle));
+                group.add(motor);
+                const propMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, transparent: true, opacity: 0.7 });
+                const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.01, 16), propMat);
+                prop.position.set(0.7 * Math.cos(angle), 0.25, 0.7 * Math.sin(angle));
+                prop.rotation.x = 0.3;
+                group.add(prop);
+                const ledMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 });
+                const led = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), ledMat);
+                led.position.set(0.7 * Math.cos(angle), 0.05, 0.7 * Math.sin(angle));
+                group.add(led);
+            }
+            return group;
+        };
+
+        window.finishAddingRobot = function(type, robotModel) {
+            robotModel.position.set((Math.random() - 0.5) * 40, 0, (Math.random() - 0.5) * 40);
+            robotModel.rotation.y = Math.random() * Math.PI * 2;
+            robotModel.scale.set(1, 1, 1);
+            scene.add(robotModel);
+            const groundY = window.placeOnGround(robotModel);
+            robotModel.position.y = groundY;
+            const robotId = 'robot_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const robot = {
+                id: robotId,
+                type: type,
+                mesh: robotModel,
+                groundY: groundY,
+                health: 100,
+                maxHealth: 100,
+                battery: 100,
+                team: null,
+                isLeader: false,
+                crown: null,
+                timeouts: []
+            };
+            robots.push(robot);
+            const option = document.createElement('option');
+            option.value = robotId;
+            option.textContent = `${type} (${robotId.slice(-4)})`;
+            robotSelect.appendChild(option);
+            if (!activeRobotId) { robotSelect.value = robotId; activeRobotId = robotId; }
+            socket.emit('register_robot', { id: robotId, type: type, health: 100, pos: {x: robotModel.position.x, y: robotModel.position.y, z: robotModel.position.z} });
+            window.updateDragControls();
+            updateActiveRobotInfo();
+        };
+
+        window.placeOnGround = function(mesh) {
+            mesh.position.y = 0;
+            mesh.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(mesh);
+            const minY = box.min.y;
+            mesh.position.y = -minY;
+            return mesh.position.y;
+        };
+
+        window.addRobot = function() {
+            if (!scene) return;
+            const type = document.getElementById('robot-type-select').value;
+            let robotModel;
+            if (type === 'robot') {
+                robotModel = window.createRobot();
+            } else if (type === 'drone') {
+                robotModel = window.createDrone();
+            } else {
+                robotModel = window.createRobot();
+            }
+            window.finishAddingRobot(type, robotModel);
+        };
+
+        window.removeRobot = function() {
+            if (!activeRobotId || !scene) return;
+            const index = robots.findIndex(r => r.id === activeRobotId);
+            if (index === -1) return;
+            const robot = robots[index];
+            if (robot.timeouts) {
+                robot.timeouts.forEach(t => clearTimeout(t));
+                robot.timeouts = [];
+            }
+            if (robot.team) {
+                const team = teams[robot.team];
+                const idx = team.indexOf(robot);
+                if (idx !== -1) team.splice(idx, 1);
+            }
+            if (robot.crown) { scene.remove(robot.crown); robot.crown = null; }
+            socket.emit('unregister_robot', { id: robot.id });
+            disposeRobot(robot.mesh);
+            robots.splice(index, 1);
+            for (let i = 0; i < robotSelect.options.length; i++) {
+                if (robotSelect.options[i].value === activeRobotId) { robotSelect.remove(i); break; }
+            }
+            activeRobotId = robots.length > 0 ? robots[0].id : null;
+            if (activeRobotId) robotSelect.value = activeRobotId;
+            window.updateDragControls();
+            updateLeaderSelect();
+            updateActiveRobotInfo();
+            const sysDiv = document.createElement('div');
+            sysDiv.textContent = 'Робот удалён.';
+            robotChat.appendChild(sysDiv);
+            robotChat.scrollTop = robotChat.scrollHeight;
+        };
+
+        window.updateDragControls = function() {
+            if (dragControls) dragControls.disconnect();
+            dragTargets.forEach(t => scene.remove(t));
+            dragTargets = [];
+            const targetMeshes = [];
+            robots.forEach(robot => {
+                const box = new THREE.Box3().setFromObject(robot.mesh);
+                const size = new THREE.Vector3(); box.getSize(size);
+                const center = new THREE.Vector3(); box.getCenter(center);
+                const geo = new THREE.BoxGeometry(size.x, size.y, size.z);
+                const mat = new THREE.MeshBasicMaterial({ visible: false, depthTest: false, depthWrite: false });
+                const invisibleBox = new THREE.Mesh(geo, mat);
+                invisibleBox.position.copy(center);
+                invisibleBox.userData.robot = robot;
+                scene.add(invisibleBox);
+                dragTargets.push(invisibleBox);
+                targetMeshes.push(invisibleBox);
+            });
+            if (targetMeshes.length === 0) { dragControls = null; return; }
+            dragControls = new THREE.DragControls(targetMeshes, camera, renderer.domElement);
+            dragControls.addEventListener('dragstart', (e) => { controls.enabled = false; e.object.visible = false; });
+            dragControls.addEventListener('drag', (e) => {
+                const robot = e.object.userData.robot;
+                if (robot) { robot.mesh.position.x = e.object.position.x; robot.mesh.position.z = e.object.position.z; robot.mesh.position.y = robot.groundY; }
+            });
+            dragControls.addEventListener('dragend', (e) => {
+                controls.enabled = true;
+                e.object.visible = true;
+                const robot = e.object.userData.robot;
+                if (robot) {
+                    robot.mesh.position.x = e.object.position.x;
+                    robot.mesh.position.z = e.object.position.z;
+                    robot.mesh.position.y = robot.groundY;
+                    socket.emit('update_position', { robot_id: robot.id, pos: { x: robot.mesh.position.x, y: robot.mesh.position.y, z: robot.mesh.position.z } });
+                }
+            });
+        };
+
+        window.sendRobotCommandStr = function(command, params) {
+            if (!activeRobotId) {
+                window.addMessage('❌ Выберите робота (кликните по нему или в списке)', 'system');
+                return;
+            }
+            const robot = robots.find(r => r.id === activeRobotId);
+            if (!robot) return;
+            const payload = { robot_id: activeRobotId, command: command };
+            if (params) payload.params = params;
+            socket.emit('robot_command', payload);
+            const respDiv = document.createElement('div');
+            respDiv.textContent = `[${activeRobotId}] ${command}`;
+            robotChat.appendChild(respDiv);
+            robotChat.scrollTop = robotChat.scrollHeight;
+        };
+
+        window.sendRobotCommand = function() {
+            const command = document.getElementById('robot-command').value.trim();
+            if (!command) return;
+            if (!selectedTeam) { window.addMessage('❌ Сначала выберите цвет команды', 'system'); return; }
+            const teamRobots = teams[selectedTeam];
+            if (teamRobots.length === 0) { window.addMessage('❌ В команде нет роботов', 'system'); return; }
+            if (command.includes('штурм точки')) {
+                const leader = teamRobots.find(r => r.isLeader) || teamRobots[0];
+                socket.emit('robot_command', { robot_id: leader.id, robot_type: leader.type, command: command });
+                window.addMessage(`🤖 Команда отправлена лидеру`, 'system');
+            } else {
+                teamRobots.forEach(robot => {
+                    socket.emit('robot_command', { robot_id: robot.id, robot_type: robot.type, command: command });
+                });
+            }
+            document.getElementById('robot-command').value = '';
+        };
+
+        window.sendTerminalCommand = function(team) {
+            const textarea = document.getElementById('input-' + team);
+            if (!textarea) return;
+            const command = textarea.value.trim();
+            if (!command) return;
+            if (selectedTeam !== team) {
+                window.addMessage(`❌ Сначала выберите команду ${team}`, 'system');
+                return;
+            }
+            const teamRobots = teams[team];
+            if (teamRobots.length === 0) {
+                window.addMessage(`❌ В команде ${team} нет роботов.`, 'system');
+                return;
+            }
+            const leader = teamRobots.find(r => r.isLeader) || teamRobots[0];
+            socket.emit('robot_command', { robot_id: leader.id, robot_type: leader.type, command: command });
+            window.addTerminalOutput(team, `> ${command}`);
+            textarea.value = '';
+        };
+
+        window.addTerminalOutput = function(team, text) {
+            const output = document.getElementById('output-' + team);
+            if (!output) return;
+            const div = document.createElement('div');
+            div.textContent = text;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        window.clearTerminal = function(team) {
+            const output = document.getElementById('output-' + team);
+            if (output) output.innerHTML = '';
+        };
+
+        socket.on('robot_response', (data) => {
+            const team = data.team;
+            if (team && document.getElementById('output-' + team)) {
+                window.addTerminalOutput(team, data.text);
+            }
+            const respDiv = document.createElement('div');
+            respDiv.textContent = (team ? `[${team}] ` : '') + data.text;
+            robotChat.appendChild(respDiv);
+            robotChat.scrollTop = robotChat.scrollHeight;
+            if (data.robot_id) {
+                const robot = robots.find(r => r.id === data.robot_id);
+                if (robot) {
+                    updateActiveRobotInfo();
+                }
+            }
+        });
+
+        socket.on('assault_decision', (data) => {
+            const { team, point, probability, attacker_count, defender_count } = data;
+            if (team && document.getElementById('output-' + team)) {
+                window.addTerminalOutput(team, `⚔️ Оценка сил для точки ${point}:`);
+                window.addTerminalOutput(team, `Атакующих: ${attacker_count}, защитников: ${defender_count}`);
+                window.addTerminalOutput(team, `Вероятность победы: ${probability}%`);
+                window.addTerminalOutput(team, `Введите "штурм" для атаки или "отступить" для отхода.`);
+                window.addTerminalOutput(team, `[штурм] [отступить]`);
+                window._assaultPoint = point;
+                window._assaultTeam = team;
+            }
+        });
+
+        document.querySelectorAll('.terminal-box textarea').forEach(textarea => {
+            textarea.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const team = textarea.id.replace('input-', '');
+                    const cmd = textarea.value.trim();
+                    if (window._assaultPoint && window._assaultTeam === team) {
+                        if (cmd === 'штурм' || cmd === 'отступить') {
+                            socket.emit('assault_decision_response', {
+                                team: team,
+                                point: window._assaultPoint,
+                                decision: cmd === 'штурм' ? 'attack' : 'retreat'
+                            });
+                            window.addTerminalOutput(team, `Решение: ${cmd}`);
+                            window._assaultPoint = null;
+                            window._assaultTeam = null;
+                            textarea.value = '';
+                        }
+                    }
+                }
+            });
+        });
+
+        socket.on('move_to', (data) => {
+            const robot = robots.find(r => r.id === data.robot_id);
+            if (!robot) return;
+            const targetPos = new THREE.Vector3(data.target.x, robot.groundY, data.target.z);
+            const minDist = data.minDistance || 0.0;
+            walkToTarget(robot, targetPos, minDist);
+        });
+
+        socket.on('robot_animate', (data) => {
+            const robot = robots.find(r => r.id === data.robot_id);
+            if (!robot) return;
+            const { action, value } = data;
+            switch (action) {
+                case 'sit':
+                    robot.mesh.position.y = robot.groundY - 0.3;
+                    break;
+                case 'stand':
+                    robot.mesh.position.y = robot.groundY;
+                    break;
+                case 'attack':
+                    robot.mesh.rotation.z = 0.2;
+                    setTimeout(() => { robot.mesh.rotation.z = 0; }, 300);
+                    break;
+                case 'turn_left':
+                    robot.mesh.rotation.y += value * 0.5;
+                    break;
+                case 'turn_right':
+                    robot.mesh.rotation.y -= value * 0.5;
+                    break;
+                default: break;
+            }
+        });
+
+        socket.on('robot_dead', (data) => {
+            const robot = robots.find(r => r.id === data.robot_id);
+            if (!robot) return;
+            if (robot.timeouts) {
+                robot.timeouts.forEach(t => clearTimeout(t));
+                robot.timeouts = [];
+            }
+            robot.mesh.position.y = 0.1;
+            robot.groundY = 0.1;
+            robot.mesh.traverse(child => { if (child.isMesh) child.material.color.set(0xffffff); });
+            robot.health = 0;
+            updateActiveRobotInfo();
+        });
+
+        socket.on('health_update', (data) => {
+            const robot = robots.find(r => r.id === data.robot_id);
+            if (robot) robot.health = data.health;
+            updateActiveRobotInfo();
+        });
+
+        socket.on('scout_assigned', (data) => {
+            const robot = robots.find(r => r.id === data.robot_id);
+            if (!robot) return;
+            const markerGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const markerMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            const marker = new THREE.Mesh(markerGeo, markerMat);
+            marker.position.set(0, 3.2, 0);
+            robot.mesh.add(marker);
+            scoutMarkers[data.robot_id] = marker;
+        });
+
+        function walkToTarget(robot, targetPos, minDistance = 0.0) {
+            if (robot.health <= 0) return;
+            const robotId = robot.id;
+            const dx = targetPos.x - robot.mesh.position.x;
+            const dz = targetPos.z - robot.mesh.position.z;
+            const dist = Math.sqrt(dx*dx + dz*dz);
+            if (dist <= minDistance) return;
+            const targetAngle = Math.atan2(-dz, dx);
+            let angleDiff = targetAngle - robot.mesh.rotation.y;
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            robot.mesh.rotation.y += angleDiff * 0.1;
+            const step = 0.1;
+            const newX = robot.mesh.position.x + step * Math.cos(robot.mesh.rotation.y);
+            const newZ = robot.mesh.position.z - step * Math.sin(robot.mesh.rotation.y);
+            robot.mesh.position.x = newX;
+            robot.mesh.position.z = newZ;
+            socket.emit('update_position', { robot_id: robotId, pos: { x: newX, y: robot.mesh.position.y, z: newZ } });
+            const remaining = Math.sqrt(Math.pow(targetPos.x - newX, 2) + Math.pow(targetPos.z - newZ, 2));
+            if (remaining > minDistance) {
+                setTimeout(() => walkToTarget(robot, targetPos, minDistance), 100);
+            }
+        }
+
+        function openProgrammingPanel(robot) {
+            currentProgrammingRobot = robot;
+            document.getElementById('side-panel').style.display = 'flex';
+            fpvActive = true;
+        }
+
+        window.uploadModel = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('model', file);
+            fetch('/upload_model', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    alert('Модель загружена.');
+                } else { alert('Ошибка: ' + data.error); }
+            });
+        };
+
+        window.openCommandList = function() { document.getElementById('commandListModal').style.display = 'flex'; };
+        window.closeCommandList = function() { document.getElementById('commandListModal').style.display = 'none'; };
+
+        // ====================================================================
+        // 3D ПРИНТЕР (старый)
+        // ====================================================================
+        socket.on('printer_log', (data) => {
+            window.addPrinterLog(data.text);
+        });
+
+        socket.on('printer_status', (data) => {
+            window.addPrinterLog(`Статус: ${data.status}`);
+            document.getElementById('print-status').textContent = `Статус: ${data.status || 'неизвестно'}`;
+            if (data.progress !== undefined) {
+                document.getElementById('print-progress').textContent = `Прогресс: ${Math.round(data.progress)}%`;
+            }
+            if (data.temperature !== undefined) {
+                document.getElementById('print-temp').textContent = data.temperature;
+            }
+            if (data.bed_temp !== undefined) {
+                document.getElementById('print-bed-temp').textContent = data.bed_temp;
+            }
+        });
+
+        socket.on('printer_clear_bed_response', () => {
+            window.clearBedThree();
+        });
+
+        window.openPrinterSim = function() {
+            document.getElementById('printerModal').style.display = 'flex';
+            setTimeout(() => initPrinterThree(), 200);
+            document.getElementById('print-status').textContent = 'Статус: готов';
+            document.getElementById('print-progress').textContent = 'Прогресс: 0%';
+            document.getElementById('print-time').textContent = 'Время: 0:00';
+            document.getElementById('printer-log').innerHTML = '';
+            printerLog = [];
+        };
+
+        window.closePrinterSim = function() {
+            document.getElementById('printerModal').style.display = 'none';
+            destroyPrinterThree();
+        };
+
+        function initPrinterThree() {
+            const container = document.getElementById('printer-three-container');
+            if (!container || printerScene) return;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            if (width === 0 || height === 0) {
+                setTimeout(initPrinterThree, 300);
+                return;
+            }
+            printerScene = new THREE.Scene();
+            printerScene.background = new THREE.Color(0x2a2a3a);
+            printerCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+            printerCamera.position.set(20, 15, 30);
+            printerCamera.lookAt(0, 0, 0);
+            printerRenderer = new THREE.WebGLRenderer({ antialias: true });
+            printerRenderer.setSize(width, height);
+            printerRenderer.shadowMap.enabled = true;
+            container.appendChild(printerRenderer.domElement);
+            printerControls = new THREE.OrbitControls(printerCamera, printerRenderer.domElement);
+            printerControls.enableDamping = true;
+            printerControls.target.set(0, 0, 0);
+            const amb = new THREE.AmbientLight(0xffffff, 0.8);
+            printerScene.add(amb);
+            const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+            dir.position.set(20, 30, 10);
+            dir.castShadow = true;
+            printerScene.add(dir);
+            const bedGeo = new THREE.BoxGeometry(22, 0.5, 22);
+            const bedMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            printerBed = new THREE.Mesh(bedGeo, bedMat);
+            printerBed.position.y = -0.25;
+            printerBed.receiveShadow = true;
+            printerScene.add(printerBed);
+            const grid = new THREE.GridHelper(22, 20, 0x888888, 0x444444);
+            grid.position.y = 0.01;
+            printerScene.add(grid);
+            animatePrinter();
+        }
+
+        function animatePrinter() {
+            if (!printerRenderer) return;
+            printerAnimationId = requestAnimationFrame(animatePrinter);
+            printerControls.update();
+            printerRenderer.render(printerScene, printerCamera);
+        }
+
+        function destroyPrinterThree() {
+            if (printerAnimationId) {
+                cancelAnimationFrame(printerAnimationId);
+                printerAnimationId = null;
+            }
+            if (printerRenderer) {
+                printerRenderer.dispose();
+                const container = document.getElementById('printer-three-container');
+                if (container) container.innerHTML = '';
+            }
+            if (printerModel && printerScene) {
+                printerScene.remove(printerModel);
+                if (printerModel.geometry) printerModel.geometry.dispose();
+                if (printerModel.material) {
+                    if (Array.isArray(printerModel.material)) printerModel.material.forEach(m => m.dispose());
+                    else printerModel.material.dispose();
+                }
+                printerModel = null;
+            }
+            printerScene = null; printerCamera = null; printerRenderer = null; printerControls = null;
+            printerBed = null;
+        }
+
+        window.loadModelForPrint = function() {
+            if (!printerScene) return;
+            if (lastGeneratedModel) {
+                socket.emit('printer_load_model', { model_name: lastGeneratedModel });
+                const geo = new THREE.BoxGeometry(10, 10, 10);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x4a6fa5 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.y = 5;
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                if (printerModel) {
+                    printerScene.remove(printerModel);
+                    if (printerModel.geometry) printerModel.geometry.dispose();
+                    if (printerModel.material) {
+                        if (Array.isArray(printerModel.material)) printerModel.material.forEach(m => m.dispose());
+                        else printerModel.material.dispose();
+                    }
+                }
+                printerModel = mesh;
+                printerScene.add(mesh);
+                window.addPrinterLog('📦 Модель загружена из генератора.');
+            } else {
+                document.getElementById('printer-file-input').click();
+            }
+        };
+
+        document.getElementById('printer-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const fileName = file.name;
+            const ext = fileName.split('.').pop().toLowerCase();
+            const reader = new FileReader();
+            if (ext === 'stl') {
+                reader.onload = function(event) {
+                    const content = event.target.result;
+                    const loader = new THREE.STLLoader();
+                    const geometry = loader.parse(content);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x4a6fa5 });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.scale.set(1, 1, 1);
+                    mesh.position.y = 0;
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    mesh.position.sub(center);
+                    mesh.position.y += 0.5;
+                    if (printerModel) {
+                        printerScene.remove(printerModel);
+                        if (printerModel.geometry) printerModel.geometry.dispose();
+                        if (printerModel.material) {
+                            if (Array.isArray(printerModel.material)) printerModel.material.forEach(m => m.dispose());
+                            else printerModel.material.dispose();
+                        }
+                    }
+                    printerModel = mesh;
+                    printerScene.add(mesh);
+                    window.addPrinterLog(`📦 Модель загружена: ${fileName}`);
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'glb' || ext === 'gltf') {
+                reader.onload = function(event) {
+                    const content = event.target.result;
+                    const loader = new THREE.GLTFLoader();
+                    loader.parse(content, '', function(gltf) {
+                        const mesh = gltf.scene;
+                        mesh.scale.set(1, 1, 1);
+                        mesh.traverse(child => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        const box = new THREE.Box3().setFromObject(mesh);
+                        const center = box.getCenter(new THREE.Vector3());
+                        mesh.position.sub(center);
+                        mesh.position.y += 0.5;
+                        if (printerModel) {
+                            printerScene.remove(printerModel);
+                            if (printerModel.geometry) printerModel.geometry.dispose();
+                            if (printerModel.material) {
+                                if (Array.isArray(printerModel.material)) printerModel.material.forEach(m => m.dispose());
+                                else printerModel.material.dispose();
+                            }
+                        }
+                        printerModel = mesh;
+                        printerScene.add(mesh);
+                        window.addPrinterLog(`📦 Модель загружена: ${fileName}`);
+                    }, function(error) {
+                        window.addPrinterLog(`❌ Ошибка загрузки GLTF: ${error}`);
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                window.addPrinterLog(`❌ Неподдерживаемый формат: ${ext}. Используйте STL, GLB или GLTF.`);
+                return;
+            }
+            e.target.value = '';
+        });
+
+        window.clearBed = function() {
+            socket.emit('printer_clear_bed');
+            window.clearBedThree();
+        };
+
+        window.clearBedThree = function() {
+            if (printerModel && printerScene) {
+                printerScene.remove(printerModel);
+                if (printerModel.geometry) printerModel.geometry.dispose();
+                if (printerModel.material) {
+                    if (Array.isArray(printerModel.material)) printerModel.material.forEach(m => m.dispose());
+                    else printerModel.material.dispose();
+                }
+                printerModel = null;
+            }
+            window.addPrinterLog('🧹 Стол очищен.');
+        };
+
+        window.printerSliceModel = function() {
+            const settings = {
+                layerHeight: parseFloat(document.getElementById('layer-height').value) || 0.2,
+                infill: parseInt(document.getElementById('infill').value) || 20,
+                speed: parseInt(document.getElementById('print-speed').value) || 60,
+                nozzleTemp: parseInt(document.getElementById('nozzle-temp').value) || 200,
+                bedTemp: parseInt(document.getElementById('bed-temp').value) || 60,
+                supports: document.getElementById('supports').checked
+            };
+            socket.emit('printer_slice', { settings: settings });
+            window.addPrinterLog('🍰 Слайсинг запущен...');
+        };
+
+        window.connectPrinter = function() {
+            const printerType = document.getElementById('printer-select').value;
+            let address = null;
+            if (printerType === 'custom') {
+                address = document.getElementById('printer-address').value.trim();
+                if (!address) {
+                    window.addPrinterLog('❌ Введите IP и порт принтера.');
+                    return;
+                }
+            }
+            socket.emit('printer_connect', { printer_type: printerType, address: address });
+            connectedPrinter = true;
+            document.getElementById('printer-address').style.display = (printerType === 'custom') ? 'inline-block' : 'none';
+            window.addPrinterLog('🔗 Подключение...');
+        };
+
+        window.disconnectPrinter = function() {
+            socket.emit('printer_disconnect');
+            connectedPrinter = false;
+            document.getElementById('print-status').textContent = 'Статус: отключено';
+            window.addPrinterLog('🔌 Отключено.');
+        };
+
+        window.startPrint = function() {
+            if (!connectedPrinter) {
+                window.addPrinterLog('❌ Принтер не подключён.');
+                return;
+            }
+            socket.emit('printer_start');
+            window.addPrinterLog('▶ Печать запущена.');
+        };
+
+        window.pausePrint = function() {
+            socket.emit('printer_pause');
+            window.addPrinterLog('⏸ Пауза.');
+        };
+
+        window.stopPrint = function() {
+            socket.emit('printer_stop');
+            window.addPrinterLog('⏹ Печать остановлена.');
+        };
+
+        window.addPrinterLog = function(text) {
+            const logDiv = document.getElementById('printer-log');
+            if (!logDiv) return;
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            printerLog.push(text);
+        };
+
+        document.getElementById('printer-select').addEventListener('change', function() {
+            const val = this.value;
+            document.getElementById('printer-address').style.display = (val === 'custom') ? 'inline-block' : 'none';
+        });
+
+        // ====================================================================
+        // УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ SLICER (iframe)
+        // ====================================================================
+        window.openSlicerModal = function() {
+            const modal = document.getElementById('slicerModal');
+            if (!modal) {
+                console.error('Модальное окно slicerModal не найдено');
+                return;
+            }
+            modal.style.display = 'flex';
+            const iframe = modal.querySelector('iframe');
+            if (iframe) {
+                iframe.src = '/slicer';
+            }
+        };
+
+        window.closeSlicerModal = function() {
+            const modal = document.getElementById('slicerModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        document.getElementById('slicerModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                window.closeSlicerModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.closeSlicerModal();
+                window.closeROS2();
+                window.closePrinterSim();
+                window.closeGenerator();
+            }
+        });
+
+        // ====================================================================
+        // ПРЯМЫЕ КОМАНДЫ В СКИЛЛЫ
+        // ====================================================================
+        window.directCommand = function(skill, command, params) {
+            window.addMessage(`[команда] ${skill}: ${command}`, 'system');
+            socket.emit('direct_command', { skill: skill, command: command, params: params });
+        };
+
+        // ====================================================================
+        // ОСТАЛЬНЫЕ ФУНКЦИИ
+        // ====================================================================
+        window.sliceModelForChat = function(filename) {
+            if (typeof window.sliceModelForChat !== 'function') {
+                window.sliceModelForChat = async function(filename) {
+                    window.addMessage(`Слайсинг: ${filename}`, 'system');
+                    try {
+                        const resp = await fetch('/slice', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename: filename })
+                        });
+                        if (!resp.ok) throw new Error(`Сервер вернул ${resp.status}`);
+                        const data = await resp.json();
+                        if (data.status === 'ok') {
+                            const gcodeFile = data.gcode_file;
+                            window.addMessage(`G-code создан: ${gcodeFile}`, 'system');
+                            window.open(encodeURI('/gcode/' + gcodeFile), '_blank');
+                        } else {
+                            window.addMessage(`Ошибка слайсинга: ${data.text || data.error}`, 'system');
+                        }
+                    } catch (e) {
+                        window.addMessage(`Ошибка сети: ${e.message}`, 'system');
+                    }
+                };
+            }
+            window.sliceModelForChat(filename);
+        };
+
+        // ==========================================================================
+        // 3D МОЗГ — СВОБОДНО ПЛАВАЮЩИЙ ВИДЖЕТ
+        // ==========================================================================
+        let brainScene, brainCamera, brainRenderer, brainControls;
+        let leftHemi, rightHemi;
+        let brainSplit = false;
+        let brainWidgetEl, brainPanelEl;
+        let brainAnimationId = null;
+        let brainNeuronPoints = { left: null, right: null };
+        let brainSynapseLines = { left: null, right: null };
+        let brainSelectedHemi = null;
+        let brainRaycaster = new THREE.Raycaster();
+        let brainMouse = new THREE.Vector2();
+
+        // Камера
+        const BRAIN_CAM_COMPACT  = 5.5;
+        const BRAIN_CAM_EXPANDED = 3.4;
+
+        // Drag состояние виджета
+        let bwDragging = false;
+        let bwDragStartX = 0, bwDragStartY = 0;
+        let bwWidgetStartX = 0, bwWidgetStartY = 0;
+        let bwMoved = false;
+
+        // Click/dblclick различение
+        let bwClickTimer = null;
+
+        // Drag состояние панели
+        let bpDragging = false;
+        let bpOffsetX = 0, bpOffsetY = 0;
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        function initBrain() {
+            brainWidgetEl = document.getElementById('brain-widget');
+            brainPanelEl  = document.getElementById('brain-panel');
+            if (!brainWidgetEl) return;
+
+            const w = brainWidgetEl.clientWidth;
+            const h = brainWidgetEl.clientHeight;
+
+            brainScene = new THREE.Scene();
+            brainScene.background = null;
+
+            brainCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+            brainCamera.position.set(0, 0.2, BRAIN_CAM_COMPACT);
+            brainCamera.lookAt(0, 0, 0);
+
+            brainRenderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true,
+                preserveDrawingBuffer: false
+            });
+            brainRenderer.setSize(w, h);
+            brainRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            brainRenderer.setClearColor(0x000000, 0);
+            brainWidgetEl.insertBefore(brainRenderer.domElement, brainWidgetEl.firstChild);
+            brainRenderer.domElement.style.position = 'absolute';
+            brainRenderer.domElement.style.top = '0';
+            brainRenderer.domElement.style.left = '0';
+            brainRenderer.domElement.style.zIndex = '1';
+            brainRenderer.domElement.style.width = '100%';
+            brainRenderer.domElement.style.height = '100%';
+
+            // === Свет ===
+            brainScene.add(new THREE.AmbientLight(0x88bbff, 0.85));
+            const d1 = new THREE.DirectionalLight(0xa6e3ff, 1.1);
+            d1.position.set(3, 5, 4); brainScene.add(d1);
+            const d2 = new THREE.DirectionalLight(0x89b4fa, 0.6);
+            d2.position.set(-4, -2, -3); brainScene.add(d2);
+            const pt = new THREE.PointLight(0x66ccff, 1.4, 12);
+            pt.position.set(0, 0, 3); brainScene.add(pt);
+
+            // === Полушария ===
+            leftHemi  = createHemisphere('left');
+            rightHemi = createHemisphere('right');
+            leftHemi.position.x  = -0.05;
+            rightHemi.position.x =  0.05;
+            brainScene.add(leftHemi);
+            brainScene.add(rightHemi);
+
+            // === Нейроны и синапсы ===
+            brainNeuronPoints.left  = createNeuronPoints('left');
+            brainNeuronPoints.right = createNeuronPoints('right');
+            leftHemi.add(brainNeuronPoints.left);
+            rightHemi.add(brainNeuronPoints.right);
+            brainSynapseLines.left  = new THREE.Group();
+            brainSynapseLines.right = new THREE.Group();
+            leftHemi.add(brainSynapseLines.left);
+            rightHemi.add(brainSynapseLines.right);
+
+            // === OrbitControls: вращение — правой кнопкой, зум — колёсиком ===
+            brainControls = new THREE.OrbitControls(brainCamera, brainRenderer.domElement);
+            brainControls.enableDamping = true;
+            brainControls.dampingFactor = 0.08;
+            brainControls.enablePan = false;
+            brainControls.autoRotate = true;
+            brainControls.autoRotateSpeed = 0.7;
+            brainControls.minDistance = 2.0;
+            brainControls.maxDistance = 12.0;
+            brainControls.mouseButtons = {
+                LEFT:   null,
+                MIDDLE: THREE.MOUSE.DOLLY,
+                RIGHT:  THREE.MOUSE.ROTATE
+            };
+
+            // === Рендер-цикл ===
+            (function animateBrain() {
+                brainAnimationId = requestAnimationFrame(animateBrain);
+                brainControls.update();
+                const t = performance.now() * 0.001;
+                if (leftHemi.material)  leftHemi.material.emissiveIntensity  = 0.3 + 0.18 * Math.sin(t * 1.5);
+                if (rightHemi.material) rightHemi.material.emissiveIntensity = 0.3 + 0.18 * Math.sin(t * 1.5 + 1.0);
+                brainRenderer.render(brainScene, brainCamera);
+            })();
+
+            // === События виджета ===
+            setupBrainDrag();
+            setupBrainClickDetection();
+
+            // === Панель ===
+            setupBrainPanelDrag();
+            document.getElementById('brain-panel-close').addEventListener('click', closeBrainPanel);
+            document.getElementById('brain-panel-save').addEventListener('click', saveHemisphereCode);
+            document.getElementById('brain-panel-revert').addEventListener('click', () => {
+                if (brainSelectedHemi) loadHemisphereCode(brainSelectedHemi);
+            });
+            document.getElementById('brain-panel-crosstalk').addEventListener('click', triggerCrossTalk);
+
+            // === Escape ===
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                if (brainPanelEl.classList.contains('visible')) {
+                    closeBrainPanel();
+                } else if (brainSplit) {
+                    mergeBrain();
+                }
+            });
+
+            // Загружаем начальные данные
+            loadBrainData();
+
+            window.addEventListener('resize', onBrainResize);
+        }
+
+        // ==================== ГЕОМЕТРИЯ ====================
+        function createHemisphere(side) {
+            const geo = new THREE.SphereGeometry(1.0, 48, 48);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+                x *= 0.85; y *= 1.05; z *= 1.15;
+                const noise =
+                    Math.sin(x * 8 + y * 5) * Math.cos(z * 7 - y * 3) * 0.055 +
+                    Math.sin(y * 12 + z * 6) * 0.03 +
+                    Math.cos(x * 10 + z * 4) * 0.025;
+                const len = Math.sqrt(x*x + y*y + z*z) || 1;
+                x += (x/len) * noise; y += (y/len) * noise; z += (z/len) * noise;
+                pos.setXYZ(i, x, y, z);
+            }
+            geo.computeVertexNormals();
+
+            const mat = new THREE.MeshPhysicalMaterial({
+                color: side === 'left' ? 0x4a9eff : 0x66d9ff,
+                emissive: side === 'left' ? 0x1a4a8a : 0x1a6a9a,
+                emissiveIntensity: 0.4,
+                transparent: true,
+                opacity: 0.55,
+                transmission: 0.4,
+                thickness: 0.8,
+                roughness: 0.25,
+                metalness: 0.05,
+                ior: 1.4,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.userData.side = side;
+
+            const wireMat = new THREE.LineBasicMaterial({
+                color: side === 'left' ? 0x89b4fa : 0xa6e3ff,
+                transparent: true, opacity: 0.15
+            });
+            const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), wireMat);
+            mesh.add(wire);
+            return mesh;
+        }
+
+        function createNeuronPoints(side) {
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(400 * 3);
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                color: side === 'left' ? 0xffdd66 : 0x66ffcc,
+                size: 0.07, transparent: true, opacity: 0.0,
+                sizeAttenuation: true, depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const points = new THREE.Points(geo, mat);
+            points.userData.side = side;
+            return points;
+        }
+
+        // ==================== DRAG ВИДЖЕТА (pointer events + capture) ====================
+        function setupBrainDrag() {
+            // Используем pointerdown в capture-фазе — перехватываем раньше OrbitControls
+            brainWidgetEl.addEventListener('pointerdown', (e) => {
+                // Только левая кнопка
+                if (e.button !== 0) return;
+                // Не начинаем drag, если клик по панели
+                if (e.target.closest('#brain-panel')) return;
+
+                e.preventDefault();
+                e.stopPropagation();  // ← блокируем OrbitControls
+
+                bwDragging = true;
+                bwMoved = false;
+                bwDragStartX = e.clientX;
+                bwDragStartY = e.clientY;
+
+                const rect = brainWidgetEl.getBoundingClientRect();
+                bwWidgetStartX = rect.left;
+                bwWidgetStartY = rect.top;
+
+                // Переводим виджет в left/top координаты для точного drag
+                brainWidgetEl.style.left  = rect.left + 'px';
+                brainWidgetEl.style.top   = rect.top  + 'px';
+                brainWidgetEl.style.right = 'auto';
+
+                // Отключаем auto-rotate и OrbitControls на время перетаскивания
+                if (brainControls) {
+                    brainControls.autoRotate = false;
+                    brainControls.enabled = false;
+                }
+
+                // Слушаем перемещение и отпускание — тоже с capture
+                document.addEventListener('pointermove', onBrainDragMove, true);
+                document.addEventListener('pointerup',   onBrainDragEnd,  true);
+                document.addEventListener('pointercancel', onBrainDragEnd, true);
+            }, true);  // ← capture: true
+
+            // Запрещаем браузерное выделение/драг картинок при перетаскивании
+            brainWidgetEl.addEventListener('dragstart', (e) => e.preventDefault());
+            brainWidgetEl.addEventListener('selectstart', (e) => e.preventDefault());
+        }
+
+        function onBrainDragMove(e) {
+            if (!bwDragging) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const dx = e.clientX - bwDragStartX;
+            const dy = e.clientY - bwDragStartY;
+
+            // Порог срабатывания — 3 px, чтобы отличить от клика
+            if (!bwMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                bwMoved = true;
+                brainWidgetEl.classList.add('dragging');
+            }
+            if (!bwMoved) return;
+
+            let nx = bwWidgetStartX + dx;
+            let ny = bwWidgetStartY + dy;
+
+            // Ограничение в пределах окна
+            const w = brainWidgetEl.offsetWidth;
+            const h = brainWidgetEl.offsetHeight;
+            nx = Math.max(-w + 60, Math.min(nx, window.innerWidth  - 60));
+            ny = Math.max(0,       Math.min(ny, window.innerHeight - 60));
+
+            brainWidgetEl.style.left = nx + 'px';
+            brainWidgetEl.style.top  = ny + 'px';
+        }
+
+        function onBrainDragEnd(e) {
+            if (!bwDragging) return;
+            bwDragging = false;
+            brainWidgetEl.classList.remove('dragging');
+
+            // Возвращаем OrbitControls
+            if (brainControls) {
+                brainControls.enabled = true;
+                brainControls.autoRotate = brainSplit ? false : true;
+            }
+
+            document.removeEventListener('pointermove', onBrainDragMove, true);
+            document.removeEventListener('pointerup',   onBrainDragEnd,  true);
+            document.removeEventListener('pointercancel', onBrainDragEnd, true);
+
+            // Держим bwMoved=true ещё 150 мс, чтобы следующий click после drag был проигнорирован
+            setTimeout(() => { bwMoved = false; }, 150);
+        }
+
+        // ==================== КЛИК / ДВОЙНОЙ КЛИК ====================
+        function setupBrainClickDetection() {
+            brainWidgetEl.addEventListener('click', (e) => {
+                // Клик по панели — игнорируем (у панели свои обработчики)
+                if (e.target.closest('#brain-panel')) return;
+
+                // Если это был drag — игнорируем клик
+                if (bwMoved) {
+                    bwMoved = false;
+                    return;
+                }
+
+                // Если уже есть ожидающий клик → это double-click
+                if (bwClickTimer) {
+                    clearTimeout(bwClickTimer);
+                    bwClickTimer = null;
+                    onBrainDoubleClick(e);
+                    return;
+                }
+                // Запускаем таймер одиночного клика
+                bwClickTimer = setTimeout(() => {
+                    bwClickTimer = null;
+                    onBrainSingleClick(e);
+                }, 240);
+            });
+
+            // Отключаем браузерный dblclick, чтобы не выделялся текст
+            brainWidgetEl.addEventListener('dblclick', (e) => e.preventDefault());
+        }
+
+        function onBrainSingleClick(event) {
+            if (brainSplit) {
+                const hit = hitTestHemisphere(event);
+                if (hit) {
+                    openHemisphereDetails(hit);
+                    return;
+                }
+                if (brainPanelEl.classList.contains('visible')) {
+                    closeBrainPanel();
+                }
+            } else {
+                splitBrain();
+            }
+        }
+
+        function onBrainDoubleClick(event) {
+            if (brainSplit) {
+                mergeBrain();
+            } else {
+                splitBrain();
+            }
+        }
+
+        function hitTestHemisphere(event) {
+            if (!brainRenderer) return null;
+            const rect = brainRenderer.domElement.getBoundingClientRect();
+            brainMouse.x = ((event.clientX - rect.left) / rect.width)  * 2 - 1;
+            brainMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            brainRaycaster.setFromCamera(brainMouse, brainCamera);
+
+            const hits = brainRaycaster.intersectObjects([leftHemi, rightHemi], true);
+            if (!hits.length) return null;
+            let obj = hits[0].object;
+            while (obj && !obj.userData.side) obj = obj.parent;
+            return obj ? obj.userData.side : null;
+        }
+
+        // ==================== SPLIT / MERGE ====================
+        function splitBrain() {
+            if (brainSplit) return;
+            brainSplit = true;
+            brainWidgetEl.classList.add('split');
+            brainWidgetEl.classList.add('expanded');
+            if (brainControls) {
+                brainControls.autoRotate = false;
+                brainControls.enableZoom = true;
+            }
+
+            animateHemisphereSplit(-0.95, 0.95, 600);
+            animateCameraZoom(BRAIN_CAM_EXPANDED, 700);
+
+            document.getElementById('brain-hint').textContent = 'клик по полушарию — редактировать · 2× — соединить';
+
+            setTimeout(onBrainResize, 60);
+        }
+
+        function mergeBrain() {
+            if (!brainSplit) return;
+            brainSplit = false;
+            brainWidgetEl.classList.remove('split');
+            brainWidgetEl.classList.remove('expanded');
+            if (brainControls) {
+                brainControls.autoRotate = true;
+                brainControls.enableZoom = false;
+                brainControls.target.set(0, 0, 0);
+            }
+
+            animateHemisphereSplit(-0.05, 0.05, 500);
+            animateCameraZoom(BRAIN_CAM_COMPACT, 600);
+
+            document.getElementById('brain-hint').textContent = 'ЛКМ — перетащить · 2× клик — разделить';
+
+            if (brainNeuronPoints.left)  brainNeuronPoints.left.material.opacity  = 0.0;
+            if (brainNeuronPoints.right) brainNeuronPoints.right.material.opacity = 0.0;
+            if (brainSynapseLines.left)  brainSynapseLines.left.visible  = false;
+            if (brainSynapseLines.right) brainSynapseLines.right.visible = false;
+            closeBrainPanel();
+
+            setTimeout(onBrainResize, 60);
+        }
+
+        function animateHemisphereSplit(xL, xR, dur) {
+            const sL = leftHemi.position.x, sR = rightHemi.position.x;
+            const t0 = performance.now();
+            (function step() {
+                const t = Math.min((performance.now() - t0) / dur, 1);
+                const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+                leftHemi.position.x  = sL + (xL - sL) * e;
+                rightHemi.position.x = sR + (xR - sR) * e;
+                leftHemi.rotation.y  = -0.3 * e;
+                rightHemi.rotation.y =  0.3 * e;
+                if (t < 1) requestAnimationFrame(step);
+            })();
+        }
+
+        function animateCameraZoom(targetZ, dur) {
+            const sZ = brainCamera.position.z;
+            const sY = brainCamera.position.y;
+            const tY = targetZ < 4 ? 0.1 : 0.2;
+            const t0 = performance.now();
+            (function step() {
+                const t = Math.min((performance.now() - t0) / dur, 1);
+                const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+                brainCamera.position.z = sZ + (targetZ - sZ) * e;
+                brainCamera.position.y = sY + (tY - sY) * e;
+                brainCamera.lookAt(0, 0, 0);
+                if (t < 1) requestAnimationFrame(step);
+            })();
+        }
+
+        function onBrainResize() {
+            if (!brainWidgetEl || !brainRenderer) return;
+            const w = brainWidgetEl.clientWidth;
+            const h = brainWidgetEl.clientHeight;
+            brainCamera.aspect = w / h;
+            brainCamera.updateProjectionMatrix();
+            brainRenderer.setSize(w, h);
+        }
+
+        // ==========================================================================
+        // ДАННЫЕ И ЖИВАЯ ВИЗУАЛИЗАЦИЯ
+        // ==========================================================================
+        let brainLiveActivations = { left: {}, right: {} };
+        let brainLastGrowth = { left: 0, right: 0 };
+
+        function loadBrainData() {
+            fetch('/api/brain/state')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.left || !data.right) return;
+                    renderNeuronsOnBrain('left',  data.left);
+                    renderNeuronsOnBrain('right', data.right);
+                    updateBrainHint(data.left.stats, data.right.stats);
+                })
+                .catch(err => console.warn('brain/state:', err));
+        }
+
+        function updateBrainHint(leftStats, rightStats) {
+            const hint = document.getElementById('brain-hint');
+            if (!hint) return;
+            if (leftStats && rightStats) {
+                hint.textContent = `L: ${leftStats.neurons}н/${leftStats.synapses}с · R: ${rightStats.neurons}н/${rightStats.synapses}с`;
+            }
+        }
+
+        function renderNeuronsOnBrain(side, hemiData) {
+            const neurons  = hemiData.neurons  || [];
+            const synapses = hemiData.synapses || [];
+            const pts = brainNeuronPoints[side];
+            if (!pts) return;
+
+            const count = Math.min(neurons.length, 400);
+            const arr = pts.geometry.attributes.position.array;
+            // Цвет по активации
+            const colors = new Float32Array(400 * 3);
+
+            for (let i = 0; i < count; i++) {
+                const golden = Math.PI * (3 - Math.sqrt(5));
+                const y = 1 - (i / Math.max(count - 1, 1)) * 2;
+                const r = Math.sqrt(1 - y*y);
+                const th = golden * i;
+                arr[i*3+0] = Math.cos(th) * r * 1.05;
+                arr[i*3+1] = y * 1.05;
+                arr[i*3+2] = Math.sin(th) * r * 1.15;
+
+                // Цвет: чем больше activation, тем ярче
+                const act = neurons[i].activation || 0;
+                const baseR = side === 'left' ? 1.0 : 0.4;
+                const baseG = side === 'left' ? 0.85 : 1.0;
+                const baseB = side === 'left' ? 0.4 : 0.7;
+                const mul = 0.3 + act * 0.7;
+                colors[i*3+0] = baseR * mul;
+                colors[i*3+1] = baseG * mul;
+                colors[i*3+2] = baseB * mul;
+            }
+            for (let i = count; i < 400; i++) {
+                arr[i*3] = 0; arr[i*3+1] = 0; arr[i*3+2] = 0;
+                colors[i*3] = 0; colors[i*3+1] = 0; colors[i*3+2] = 0;
+            }
+            pts.geometry.attributes.position.needsUpdate = true;
+            if (!pts.geometry.attributes.color) {
+                pts.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            } else {
+                pts.geometry.attributes.color.copyArray(colors);
+                pts.geometry.attributes.color.needsUpdate = true;
+            }
+            pts.geometry.setDrawRange(0, count);
+            pts.material.vertexColors = true;
+            pts.material.size = 0.09;
+
+            // === СИНАПСЫ ===
+            const group = brainSynapseLines[side];
+            while (group.children.length > 0) {
+                const c = group.children[0];
+                group.remove(c);
+                if (c.geometry) c.geometry.dispose();
+                if (c.material) c.material.dispose();
+            }
+            const posMap = {};
+            for (let i = 0; i < count; i++) {
+                posMap[neurons[i].id] = new THREE.Vector3(arr[i*3], arr[i*3+1], arr[i*3+2]);
+            }
+            for (const s of synapses) {
+                const p1 = posMap[s.source_id], p2 = posMap[s.target_id];
+                if (!p1 || !p2) continue;
+                const geo = new THREE.BufferGeometry().setFromPoints([p1.clone(), p2.clone()]);
+                const w = s.weight || 0;
+                const opacity = 0.15 + 0.7 * w;
+                const mat = new THREE.LineBasicMaterial({
+                    color: side === 'left' ? 0xffaa44 : 0x44ffaa,
+                    transparent: true,
+                    opacity: opacity,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                });
+                group.add(new THREE.Line(geo, mat));
+            }
+            // Показываем только при открытой панели — но саму сеть прячем под мозг
+            pts.material.opacity = brainSplit && brainSelectedHemi === side ? 0.95 : 0.0;
+            group.visible = brainSplit && brainSelectedHemi === side;
+        }
+
+        // ==================== ПАНЕЛЬ ДЕТАЛЕЙ ====================
+        function openHemisphereDetails(side) {
+            brainSelectedHemi = side;
+
+            if (brainNeuronPoints.left)  brainNeuronPoints.left.material.opacity  = (side === 'left')  ? 0.9 : 0.0;
+            if (brainNeuronPoints.right) brainNeuronPoints.right.material.opacity = (side === 'right') ? 0.9 : 0.0;
+            if (brainSynapseLines.left)  brainSynapseLines.left.visible  = (side === 'left');
+            if (brainSynapseLines.right) brainSynapseLines.right.visible = (side === 'right');
+
+            const modelName = side === 'left' 
+                ? 'ИНЖЕНЕР · qwen2.5:3b' 
+                : 'КРИТИК · qwen2.5:7b';
+            document.getElementById('brain-panel-title').innerHTML =
+                (side === 'left' ? '🔧 ЛЕВОЕ ПОЛУШАРИЕ — ИНЖЕНЕР' : '🧐 ПРАВОЕ ПОЛУШАРИЕ — КРИТИК') +
+                ' <span class="model-badge">' + modelName + '</span>';
+
+            const brainRect = brainWidgetEl.getBoundingClientRect();
+            const panelW = 520;
+            const margin = 20;
+            const spaceLeft  = brainRect.left;
+            const spaceRight = window.innerWidth - brainRect.right;
+
+            brainPanelEl.style.transform = 'translateY(-50%)';
+            if (spaceLeft >= panelW + margin) {
+                brainPanelEl.style.left  = margin + 'px';
+                brainPanelEl.style.right = 'auto';
+            } else if (spaceRight >= panelW + margin) {
+                brainPanelEl.style.left  = 'auto';
+                brainPanelEl.style.right = margin + 'px';
+            } else {
+                brainPanelEl.style.left  = '50%';
+                brainPanelEl.style.right = 'auto';
+                brainPanelEl.style.transform = 'translate(-50%, -50%)';
+            }
+            brainPanelEl.style.top = '50%';
+
+            brainPanelEl.classList.add('visible');
+
+            loadHemisphereCode(side);
+            loadHemisphereStats(side);
+        }
+
+        function loadHemisphereStats(side) {
+            fetch('/api/brain/hemisphere/' + side)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) return;
+                    const st = data.stats || {};
+                    document.getElementById('brain-panel-stats').innerHTML = `
+                        <div class="stat"><span class="num">${st.neurons || 0}</span><span class="lbl">НЕЙРОНЫ</span></div>
+                        <div class="stat"><span class="num">${st.synapses || 0}</span><span class="lbl">СИНАПСЫ</span></div>
+                        <div class="stat"><span class="num">${(st.avg_activation || 0).toFixed(2)}</span><span class="lbl">АКТИВАЦИЯ</span></div>
+                    `;
+                })
+                .catch(() => {});
+        }
+
+        function loadHemisphereCode(side) {
+            const ta = document.getElementById('brain-panel-code');
+            const status = document.getElementById('brain-panel-status');
+            ta.value = '# Загрузка...';
+            ta.disabled = true;
+            status.textContent = 'Загрузка кода...';
+            status.className = 'save-status info';
+
+            fetch('/api/brain/hemisphere/' + side + '/code')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        ta.value = '# Ошибка: ' + data.error;
+                        status.textContent = 'Ошибка загрузки';
+                        status.className = 'save-status err';
+                        return;
+                    }
+                    ta.value = data.code || '# Пусто';
+                    ta.disabled = false;
+                    status.textContent = '';
+                    status.className = 'save-status';
+                })
+                .catch(err => {
+                    ta.value = '# Ошибка сети: ' + err;
+                    status.textContent = 'Ошибка сети';
+                    status.className = 'save-status err';
+                });
+        }
+
+        function saveHemisphereCode() {
+            if (!brainSelectedHemi) return;
+            const code = document.getElementById('brain-panel-code').value;
+            const status = document.getElementById('brain-panel-status');
+            const btn = document.getElementById('brain-panel-save');
+
+            btn.disabled = true;
+            status.textContent = 'Сохранение...';
+            status.className = 'save-status info';
+
+            fetch('/api/brain/hemisphere/' + brainSelectedHemi + '/code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    status.textContent = '❌ ' + data.error;
+                    status.className = 'save-status err';
+                } else {
+                    const n = data.neurons_added ?? 0;
+                    const s = data.synapses_added ?? 0;
+                    status.textContent = `✅ Сохранено: ${n} нейронов, ${s} синапсов`;
+                    status.className = 'save-status ok';
+                    loadBrainData();
+                    loadHemisphereStats(brainSelectedHemi);
+                }
+            })
+            .catch(err => {
+                status.textContent = '❌ Ошибка сети: ' + err;
+                status.className = 'save-status err';
+            })
+            .finally(() => { btn.disabled = false; });
+        }
+
+        function closeBrainPanel() {
+            brainPanelEl.classList.remove('visible');
+            brainSelectedHemi = null;
+            if (brainNeuronPoints.left)  brainNeuronPoints.left.material.opacity  = 0.0;
+            if (brainNeuronPoints.right) brainNeuronPoints.right.material.opacity = 0.0;
+            if (brainSynapseLines.left)  brainSynapseLines.left.visible  = false;
+            if (brainSynapseLines.right) brainSynapseLines.right.visible = false;
+            brainPanelEl.style.left = '30px';
+            brainPanelEl.style.right = 'auto';
+            brainPanelEl.style.top = '50%';
+            brainPanelEl.style.transform = 'translateY(-50%)';
+        }
+
+        function triggerCrossTalk() {
+            const btn = document.getElementById('brain-panel-crosstalk');
+            const status = document.getElementById('brain-panel-status');
+            btn.disabled = true;
+            status.textContent = '⚡ Cross-talk...';
+            status.className = 'save-status info';
+
+            fetch('/api/brain/cross_talk', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        status.textContent = '❌ ' + data.error;
+                        status.className = 'save-status err';
+                    } else {
+                        status.textContent = '✅ Cross-talk выполнен';
+                        status.className = 'save-status ok';
+                        window.addMessage('⚡ Cross-talk: ' + (data.response || '').slice(0, 150), 'system');
+                        loadBrainData();
+                        if (brainSelectedHemi) loadHemisphereStats(brainSelectedHemi);
+                    }
+                })
+                .catch(err => {
+                    status.textContent = '❌ ' + err;
+                    status.className = 'save-status err';
+                })
+                .finally(() => { btn.disabled = false; });
+        }
+
+        // ==================== DRAG ПАНЕЛИ ====================
+        function setupBrainPanelDrag() {
+            const header = document.getElementById('brain-panel-header');
+            if (!header) return;
+            header.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (e.target.id === 'brain-panel-close') return;
+                e.preventDefault();
+
+                const rect = brainPanelEl.getBoundingClientRect();
+                brainPanelEl.style.transform = 'none';
+                brainPanelEl.style.left = rect.left + 'px';
+                brainPanelEl.style.top  = rect.top  + 'px';
+                brainPanelEl.style.right = 'auto';
+
+                bpDragging = true;
+                bpOffsetX = e.clientX - rect.left;
+                bpOffsetY = e.clientY - rect.top;
+
+                brainPanelEl.classList.add('dragging');
+                document.body.style.cursor = 'move';
+                document.body.style.userSelect = 'none';
+
+                document.addEventListener('mousemove', onBPMove);
+                document.addEventListener('mouseup',   onBPEnd);
+            });
+        }
+
+        function onBPMove(e) {
+            if (!bpDragging) return;
+            e.preventDefault();
+            let nx = e.clientX - bpOffsetX;
+            let ny = e.clientY - bpOffsetY;
+            const w = brainPanelEl.offsetWidth, h = brainPanelEl.offsetHeight;
+            nx = Math.max(-w + 60, Math.min(nx, window.innerWidth  - 60));
+            ny = Math.max(0,       Math.min(ny, window.innerHeight - 60));
+            brainPanelEl.style.left = nx + 'px';
+            brainPanelEl.style.top  = ny + 'px';
+        }
+
+        function onBPEnd() {
+            bpDragging = false;
+            brainPanelEl.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onBPMove);
+            document.removeEventListener('mouseup',   onBPEnd);
+        }
+
+        // ==================== ЗАПУСК ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (typeof THREE !== 'undefined') {
+                    initBrain();
+                } else {
+                    console.warn('THREE.js не загружен — мозг отключён');
+                }
+            }, 500);
+        });
+
+        // ==========================================================================
+        // ЖИВЫЕ СОБЫТИЯ МОЗГА (Socket.IO)
+        // ==========================================================================
+        socket.on('brain_activation', (data) => {
+            if (!brainScene || !brainSplit) return;
+            const hemi = data.hemisphere;
+            // Лёгкий зум-эффект для пульсации
+            const hemiObj = hemi === 'left' ? leftHemi : rightHemi;
+            if (hemiObj && hemiObj.material) {
+                hemiObj.material.emissiveIntensity = 1.2;
+                setTimeout(() => { hemiObj.material.emissiveIntensity = 0.4; }, 220);
+            }
+            // Если открыта панель этого полушария — обновляем данные
+            if (brainSelectedHemi === hemi) {
+                loadBrainData();
+                loadHemisphereStats(hemi);
+            }
+        });
+
+        socket.on('brain_growth', (data) => {
+            const hemi = data.hemisphere;
+            const created = data.created || 0;
+            if (created > 0) {
+                window.addMessage(`🧠 ${hemi}: +${created} новых нейронов`, 'system');
+            }
+            // Обновляем мозг
+            setTimeout(loadBrainData, 200);
+        });
+
+        socket.on('brain_prune', (data) => {
+            const s = data.synapses_removed || 0;
+            const n = data.neurons_removed || 0;
+            if (s || n) {
+                console.log(`[Brain] prune: -${s} синапсов, -${n} нейронов`);
+                setTimeout(loadBrainData, 200);
+            }
+        });
+
+        socket.on('brain_reset', (data) => {
+            console.log(`[Brain] reset: ${data.hemisphere}`);
+            setTimeout(loadBrainData, 300);
+        });
+
+        socket.on('brain_process_start', (data) => {
+            console.log(`[Brain] process start: ${data.process_type} (${data.process_id})`);
+        });
+
+        // ==========================================================================
+        // EXPLODE — РАЗБОР МОДЕЛИ НА ЧАСТИ
+        // ==========================================================================
+        function explodeCurrentModel() {
+            const v = cadVariants[cadCurrentIndex];
+            if (!v || !v.stl_base64) { alert('Нет модели'); return; }
+            document.getElementById('generation-status').textContent = '⏳ Разбираем на части...';
+            socket.emit('explode_model', { stl_base64: v.stl_base64 });
+        }
+
+        socket.on('model_exploded', (data) => {
+            if (!data.parts || data.parts.length <= 1) {
+                document.getElementById('generation-status').textContent =
+                    'ℹ️ Модель цельная — разбирать нечего';
+                return;
+            }
+            document.getElementById('generation-status').textContent =
+                `✅ Разобрано на ${data.parts.length} частей`;
+            cadExploded = true;
+            cadExplodedParts = data.parts;
+
+            // Убираем текущую модель и показываем части
+            if (viewerModel) {
+                viewerScene.remove(viewerModel);
+                viewerModel = null;
+            }
+            showExplodedParts();
+            document.getElementById('restore-btn').style.display = 'inline-block';
+        });
+
+        socket.on('explode_error', (data) => {
+            document.getElementById('generation-status').textContent = '❌ ' + data.error;
+        });
+
+        function showExplodedParts() {
+            if (!viewerScene) return;
+            // Центр модели — для разлёта
+            const loader = new THREE.STLLoader();
+            cadExplodedParts.forEach((part, i) => {
+                const binary = atob(part.stl_base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                loader.load(url, (geometry) => {
+                    const hue = (i / cadExplodedParts.length) * 0.8;
+                    const color = new THREE.Color().setHSL(hue, 0.7, 0.6);
+                    const material = new THREE.MeshStandardMaterial({
+                        color, roughness: 0.35, metalness: 0.15
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    // Центрируем и разлёт
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    mesh.position.sub(center);
+                    const dir = new THREE.Vector3(
+                        Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5
+                    ).normalize().multiplyScalar(3 + i * 0.5);
+                    mesh.position.add(dir);
+                    viewerScene.add(mesh);
+                    URL.revokeObjectURL(url);
+                });
+            });
+        }
+
+        function restoreAssembled() {
+            // Убираем части, показываем оригинал
+            const toRemove = [];
+            viewerScene.traverse(o => {
+                if (o.isMesh && o !== viewerModel) toRemove.push(o);
+            });
+            toRemove.forEach(o => {
+                viewerScene.remove(o);
+                if (o.geometry) o.geometry.dispose();
+                if (o.material) o.material.dispose();
+            });
+            cadExploded = false;
+            cadExplodedParts = [];
+            loadVariantIntoViewer(cadCurrentIndex);
+            document.getElementById('restore-btn').style.display = 'none';
+        }
+
+        // ==========================================================================
+        // ФИЗИКА — ПЕРЕКЛЮЧАТЕЛЬ
+        // ==========================================================================
+        function togglePhysics() {
+            if (cadPhysicsRunning) {
+                stopCadPhysics();
+            } else {
+                startCadPhysics();
+            }
+        }
+
+        function startCadPhysics() {
+            const v = cadVariants[cadCurrentIndex];
+            if (!v || !v.stl_base64) { alert('Нет модели'); return; }
+            cadPhysicsRunning = true;
+            document.getElementById('physics-gen-btn').textContent = '⏹ Остановить физику';
+
+            // Инициализируем физическую сцену
+            if (!viewerScene) return;
+
+            // Создаём землю
+            if (!viewerScene.getObjectByName('physics_ground')) {
+                const groundGeo = new THREE.PlaneGeometry(20, 20);
+                const groundMat = new THREE.MeshStandardMaterial({ color: 0x2a2a3e, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+                const ground = new THREE.Mesh(groundGeo, groundMat);
+                ground.name = 'physics_ground';
+                ground.rotation.x = -Math.PI / 2;
+                ground.position.y = -1.5;
+                viewerScene.add(ground);
+            }
+
+            // Загружаем модель как физическое тело
+            const loader = new THREE.STLLoader();
+            const binary = atob(v.stl_base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            loader.load(url, (geometry) => {
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xff8800, roughness: 0.3, metalness: 0.3
+                });
+                cadPhysicsMesh = new THREE.Mesh(geometry, material);
+                cadPhysicsMesh.name = 'physics_body';
+                const box = new THREE.Box3().setFromObject(cadPhysicsMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                cadPhysicsMesh.position.sub(center);
+                cadPhysicsMesh.position.y += 3;
+                viewerScene.add(cadPhysicsMesh);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        function stopCadPhysics() {
+            cadPhysicsRunning = false;
+            document.getElementById('physics-gen-btn').textContent = '🔬 Физика';
+            if (cadPhysicsMesh) {
+                viewerScene.remove(cadPhysicsMesh);
+                if (cadPhysicsMesh.geometry) cadPhysicsMesh.geometry.dispose();
+                cadPhysicsMesh = null;
+            }
+            const ground = viewerScene.getObjectByName('physics_ground');
+            if (ground) viewerScene.remove(ground);
+        }
+
+        // Физический тик — вызывается из render loop
+        function updateCadPhysics() {
+            if (!cadPhysicsRunning || !cadPhysicsMesh) return;
+            // Простая гравитация
+            cadPhysicsMesh.position.y -= 0.02;
+            // Отскок от земли
+            if (cadPhysicsMesh.position.y < -1.4) {
+                cadPhysicsMesh.position.y = -1.4;
+                cadPhysicsMesh.rotation.x += 0.05;
+                cadPhysicsMesh.rotation.z += 0.03;
+            }
+        }
+
+        console.log('Urfin Jus загружен. Версия 0.9');
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "prompt": "\u0446\u0438\u043b\u0438\u043d\u0434\u0440 \u0440\u0430\u0434\u0438\u0443\u0441\u043e\u043c 5 \u0432\u044b\u0441\u043e\u0442\u043e\u0439 20",
+  "backend": "build123d",
+  "iterations": 1,
+  "execution_time_seconds": 54.873,
+  "metrics": {
+    "is_watertight": true,
+    "volume_mm3": 1570.15,
+    "bounding_box_mm": [
+      10.0,
+      10.0,
+      20.0
+    ],
+    "vertex_count": 252,
+    "face_count": 500
+  },
+  "artifacts": {
+    "model.step": "/home/klhhhhh/urfin-jus/urfin_jus/temp_cadcore/model.step",
+    "model.py": "/home/klhhhhh/urfin-jus/urfin_jus/temp_cadcore/model.py",
+    "model.stl": "/home/klhhhhh/urfin-jus/urfin_jus/temp_cadcore/model.stl",
+    "drawing.svg": "/home/klhhhhh/urfin-jus/urfin_jus/temp_cadcore/drawing.svg"
+  },
+  "error_message": null
+}

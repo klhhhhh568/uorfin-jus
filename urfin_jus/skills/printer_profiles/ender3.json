@@ -1,0 +1,15 @@
+{
+  "machine_width": 235,
+  "machine_depth": 235,
+  "machine_height": 250,
+  "nozzle_size": 0.4,
+  "print_speed": 40,
+  "travel_speed": 120,
+  "layer_height": 0.2,
+  "infill_sparse_density": 15,
+  "material_print_temperature": 200,
+  "material_bed_temperature": 50,
+  "support_enable": false,
+  "adhesion_type": "skirt",
+  "retraction_enable": true
+}

@@ -1,0 +1,6 @@
+{
+  "Description": "Извлечение параметров 3D-модели из текстового описания",
+  "Data_Path": "data/input.csv",
+  "Input_Field": "text",
+  "Parser_Format": "cad_parser.py"
+}

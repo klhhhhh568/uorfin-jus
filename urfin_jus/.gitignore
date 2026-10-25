@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+urfin_env/
+venv/
+.pytest_cache/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Node / Electron
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist-electron/
+
+# Данные (не коммитим)
+*.db
+*.db-shm
+*.db-wal
+*.stl
+*.gcode
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Локальное окружение
+.env
+*.local

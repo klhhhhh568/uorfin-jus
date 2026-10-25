@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Установка Urfin Jus</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .setup-container {
+            background: #313244;
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .field {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-weight: bold;
+        }
+        select, input[type="checkbox"] {
+            background: #45475a;
+            color: #cdd6f4;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+        select {
+            width: 100%;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.3rem;
+        }
+        .btn-install {
+            background: #89b4fa;
+            color: #1e1e2e;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 2rem;
+            cursor: pointer;
+            display: block;
+            margin-left: auto;
+            margin-top: 1.5rem;
+            transition: background 0.2s;
+        }
+        .btn-install:hover {
+            background: #74a7e8;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>⚙️ Настройка Urfin Jus</h1>
+        <div class="field">
+            <label for="lang">Язык интерфейса</label>
+            <select id="lang">
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+        <div class="field">
+            <div class="checkbox-group">
+                <input type="checkbox" id="autostart">
+                <label for="autostart">Закрепить на начальном экране (автозапуск)</label>
+            </div>
+        </div>
+        <div class="field">
+            <div class="checkbox-group">
+                <input type="checkbox" id="desktop">
+                <label for="desktop">Создать ярлык на рабочем столе</label>
+            </div>
+        </div>
+        <button class="btn-install" id="installBtn">✅ Установить</button>
+    </div>
+    <script src="setup.js"></script>
+</body>
+</html>

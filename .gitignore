@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Виртуальные окружения
+urfin_env/
+venv/
+.venv/
+env/
+*_env/
+ENV/
+
+# PyInstaller / build
+build/
+dist/
+*.spec.bak
+*.pyz
+*.pyzw
+
+# Node / Electron
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist-electron/
+.npm/
+.pnpm-store/
+
+# Данные приложения
+*.db
+*.db-shm
+*.db-wal
+*.stl
+*.gcode
+*.3mf
+*.step
+*.stp
+logs/
+*.log
+
+# IDE / редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Локальное окружение
+.env
+.env.local
+*.local
+
+# Случайные архивы / установщики
+Miniconda3*.sh
+Anaconda3*.sh
+*.tar.gz
+*.zip
+*.whl
+
+# Файлы от ошибочного шелл-редиректа
+=*
+
+# Бэкапы любых файлов
+*.bak
+*.bak_*
+*.before_fix
+*.orig
+*~
+
+# Любые .db и бэкапы
+*.db
+*.db.*
+*.db-shm
+*.db-wal
+
+# Бинарники PyInstaller / собранные
+urfin_jus/electron/backend/run_backend
+urfin_jus/electron/backend/*.bin
+*.exe
+*.so
+
+# Логи сборки
+build.log
+*.build.log

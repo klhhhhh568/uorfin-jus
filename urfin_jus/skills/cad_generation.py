@@ -200,6 +200,7 @@ class CADGenerator:
 
     def __init__(self, dual_skill, engine_cad=None):
         self.dual = dual_skill
+        self._current_triz_hint = ""   # TRIZ-хинт для system_prompt CAD-LLM
         self.engine_cad = engine_cad
         self.cad_model = CAD_MODEL_DEFAULT
 
@@ -264,6 +265,25 @@ class CADGenerator:
             "error": None,
         }
 
+        # === TRIZ-анализ (до CAD-генерации, чтобы хинт попал в system_prompt) ===
+        triz_result = self._triz_analyze(prompt)
+        result["triz"] = triz_result
+        self._current_triz_hint = (
+            triz_result.get("picogk_hint", "")
+            if self._should_apply_triz(prompt, triz_result)
+            else ""
+        )
+        try:
+            if self._current_triz_hint:
+                logger.info(
+                    f"[TRIZ] хинт применён ({len(triz_result.get('principles', []))} принципов, "
+                    f"источник={triz_result.get('source')})"
+                )
+            else:
+                logger.debug("[TRIZ] хинт не применён (простой запрос без противоречия)")
+        except Exception:
+            pass
+
         # === LLM генерирует тело build() ===
         body, code, logs = self._generate_code_with_retry(prompt)
         result["logs"] = logs
@@ -286,7 +306,7 @@ class CADGenerator:
             return result
 
         result["variants"] = [variant]
-        result["triz"] = self._triz_analyze(prompt)
+        # result["triz"] уже установлен в начале generate()
 
         try:
             self._feed_brain(prompt, body)
@@ -314,8 +334,14 @@ class CADGenerator:
                     f"Напиши ИСПРАВЛЕННОЕ тело функции build(pg). Только код, без def."
                 )
 
+            # Подмешиваем TRIZ-хинт в system_prompt (если установлен выше)
+            triz_hint = getattr(self, "_current_triz_hint", "")
+            effective_system = BUILD_SYSTEM_PROMPT
+            if triz_hint:
+                effective_system = BUILD_SYSTEM_PROMPT + "\n\n" + triz_hint
+
             raw = self.dual._call_ollama(
-                self.cad_model, user_msg, BUILD_SYSTEM_PROMPT,
+                self.cad_model, user_msg, effective_system,
                 temperature=0.1 + 0.1 * (attempt - 1),
             )
             if not raw:
@@ -689,18 +715,44 @@ class CADGenerator:
 
     # ==================== TRIZ ====================
     def _triz_analyze(self, prompt: str) -> Dict[str, Any]:
+        """Полный TRIZ-анализ: матрица 39×39 + PicoGK-маппинг.
+
+        Возвращает структуру:
+          - improve_param / worsen_param: параметры противоречия
+          - principles: список принципов с ops и hint
+          - picogk_hint: текст для system_prompt CAD-LLM
+          - suggestions / contradictions: обратная совместимость с UI
+        """
+        try:
+            from .triz_skill import analyze as _triz_analyze_full
+            return _triz_analyze_full(prompt, llm_call=None)
+        except Exception as e:
+            logger.warning(f"[TRIZ] анализ упал: {e}")
+            return {
+                "improve_param": {}, "worsen_param": {},
+                "principles": [], "picogk_hint": "",
+                "suggestions": [], "contradictions": [],
+                "source": "error", "confidence": 0.0,
+            }
+
+    @staticmethod
+    def _should_apply_triz(prompt: str, triz: Dict[str, Any]) -> bool:
+        """Решает, добавлять ли TRIZ-хинт в system_prompt CAD-LLM.
+
+        Не добавляем, если:
+          - нет принципов
+          - в промпте нет признаков противоречия (простой запрос типа «сфера R=10»)
+        """
+        if not triz.get("principles"):
+            return False
         p = prompt.lower()
-        s = []
-        if "пол" in p or "стенк" in p:
-            s.append("Проверить равномерность толщины стенки")
-        if "решётк" in p or "латтис" in p:
-            s.append("Настроить плотность решётки под нагрузку")
-        if not s:
-            s = ["Проверить технологичность", "Оценить напряжения"]
-        return {
-            "suggestions": s,
-            "contradictions": ["Прочность vs масса", "Точность vs скорость"],
-        }
+        markers = [
+            " но ", " однако ", " при этом ", " одновременно ",
+            "лёгк", "легк", "прочн", "точн", "дешёв", "дешев",
+            "быстр", "надёжн", "надежн", "оптимальн", "облегч",
+            "усилить", "повысить", "уменьшить", "вибраци", "нагруз",
+        ]
+        return any(m in p for m in markers)
 
     # ==================== МОЗГ ====================
     def _feed_brain(self, prompt: str, code: str):

@@ -220,6 +220,9 @@ export URFIN_CAD_PYTHON=/path/to/urfin_env/bin/python3
 
 # Если Ollama слушает не стандартный порт
 export OLLAMA_BASE_URL=http://localhost:11434
+
+Примечание: ros2 не изменялся с прошлого релиза, его обновление будет в следующем релзе.
+
 📜 Лицензия
 
 GPL v3 — см. LICENSE.

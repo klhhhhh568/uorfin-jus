@@ -1741,7 +1741,13 @@
             md.innerHTML = `
                 <b>Анализ:</b> ${data.analysis?.shape_type || '—'}<br>
                 <b>Назначение:</b> ${data.analysis?.purpose || '—'}<br>
-                <b>TRIZ:</b> ${(data.triz?.suggestions || []).length} решений
+                ${data.triz && data.triz.principles && data.triz.principles.length
+                    ? `<b>TRIZ:</b> ${data.triz.improve_param?.name || '?'} ↔ ${data.triz.worsen_param?.name || '?'}
+                       <span style="font-size:10px;color:#888">(${data.triz.source || '?'}, conf=${(data.triz.confidence || 0).toFixed(2)})</span>
+                       <div style="margin-top:4px">${data.triz.principles.map(p =>
+                         `<span style="display:inline-block;background:#2a2a40;border-radius:4px;padding:2px 7px;margin:2px;font-size:11px" title="${(p.hint || '').replace(/"/g, '&quot;')}">${p.id}. ${p.name}</span>`
+                       ).join('')}</div>`
+                    : '<b>TRIZ:</b> —'}
             `;
 
             // Загружаем лучший вариант
